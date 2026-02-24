@@ -42,3 +42,6 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+# Claude Code (AI assistant config - local only)
+.claude/
