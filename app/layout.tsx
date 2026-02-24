@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Barlow_Condensed, JetBrains_Mono } from "next/font/google";
+import { EventProvider } from "@/lib/stores/event-store";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable}`}>
-        {children}
+        <EventProvider>{children}</EventProvider>
       </body>
     </html>
   );

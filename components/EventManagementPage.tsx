@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -19,6 +19,7 @@ import {
   CalendarClock,
   SlidersHorizontal,
 } from "lucide-react";
+import { useEvents } from "@/lib/stores/event-store";
 
 /* ─────────────────────────────────────────────
    DATA
@@ -193,21 +194,63 @@ interface EventManagementPageProps {
 }
 
 export function EventManagementPage({ onCreateEvent, onEventClick }: EventManagementPageProps) {
+  const { events } = useEvents();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // Convert events from store to the format expected by the component
+  const convertedEvents: SportEvent[] = useMemo(() => {
+    return events.map((event) => {
+      const startDate = new Date(event.startDate);
+      const endDate = new Date(event.endDate);
+      const today = new Date();
+      const daysUntil = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      let daysVariant: "urgent" | "warning" | "upcoming" | "ended" | "far" = "far";
+      if (today > endDate) daysVariant = "ended";
+      else if (daysUntil <= 7) daysVariant = "urgent";
+      else if (daysUntil <= 14) daysVariant = "warning";
+      else if (daysUntil <= 30) daysVariant = "upcoming";
+
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const daysLabel = daysDiff > 0
+        ? `${daysDiff} days`
+        : `${Math.abs(daysDiff)} days`;
+
+      // Generate logo from event name
+      const initials = event.name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+      const emoji = event.sports[0]?.emoji || "🏆";
+
+      return {
+        id: event.id,
+        logo: { bg: "linear-gradient(135deg,#2563BD,#7C3AED)", text: initials, emoji },
+        name: event.name,
+        type: event.type,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        daysLabel,
+        daysVariant,
+        status: event.status,
+        sports: event.sports.map((s) => s.emoji),
+        location: `${event.location.city}${event.location.venue ? `, ${event.location.venue}` : ""}`,
+        usedKeys: event.usedKeys,
+        totalKeys: event.totalKeys,
+      };
+    });
+  }, [events]);
+
   const tabCounts: Record<FilterTab, number> = {
-    all: EVENTS.length,
-    active: EVENTS.filter((e) => e.status === "active").length,
-    inactive: EVENTS.filter((e) => e.status === "inactive").length,
-    upcoming: EVENTS.filter((e) => e.status === "upcoming").length,
-    completed: EVENTS.filter((e) => e.status === "completed").length,
-    archived: EVENTS.filter((e) => e.status === "archived").length,
+    all: convertedEvents.length,
+    active: convertedEvents.filter((e) => e.status === "active").length,
+    inactive: convertedEvents.filter((e) => e.status === "inactive").length,
+    upcoming: convertedEvents.filter((e) => e.status === "upcoming").length,
+    completed: convertedEvents.filter((e) => e.status === "completed").length,
+    archived: convertedEvents.filter((e) => e.status === "archived").length,
   };
 
-  const filtered = EVENTS.filter((e) => {
+  const filtered = convertedEvents.filter((e) => {
     const matchTab = activeTab === "all" || e.status === activeTab;
     const matchSearch =
       search === "" ||
@@ -271,7 +314,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
                 marginTop: "0.4rem",
               }}
             >
-              {EVENTS.length} total events &nbsp;·&nbsp;
+              {convertedEvents.length} total events &nbsp;·&nbsp;
               <span style={{ color: "#22C55E", fontWeight: 500 }}>
                 {tabCounts.active} active
               </span>
