@@ -17,7 +17,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
-import type { EventLocation, SponsorLogo, SportCategory } from "@/lib/types/event";
+import type { SportEvent } from "@/lib/types/event";
 
 interface CreateEventModalProps {
   onClose: () => void;
@@ -364,7 +364,7 @@ function SportMultiSelect({
   const [open, setOpen] = useState(false);
 
   const toggle = (id: string) => {
-    // Use the handler with validation
+    // Use handler with validation
     onSportToggle(id);
     // Update parent state
     onChange(
@@ -511,7 +511,7 @@ function SportMultiSelect({
 export function CreateEventModal({ onClose }: CreateEventModalProps) {
   const { addEvent, events } = useEvents();
 
-  /* ── Form state (empty for create new event) ── */
+  /* ── Form state (empty for new event) ── */
   const [eventName, setEventName] = useState("");
   const [eventType, setEventType] = useState<EventType>("single");
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
@@ -527,91 +527,58 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  /* Validation helper */
+  /* Validation */
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!eventName.trim()) {
-      newErrors.eventName = "Event name is required";
-    }
-
-    // Single event: max 1 sport
+    if (!eventName.trim()) newErrors.eventName = "Event name is required";
     if (eventType === "single" && selectedSports.length > 1) {
-      newErrors.sports = "Single event can only have 1 sport category";
+      newErrors.sports = "Single event can only have 1 sport";
     }
-    // Multi event: min 1 sport
     if (eventType === "multi" && selectedSports.length < 1) {
-      newErrors.sports = "Multi event must have at least 1 sport category";
+      newErrors.sports = "Multi event needs at least 1 sport";
     }
-
-    if (!location.trim()) {
-      newErrors.location = "Location is required";
-    }
-
-    if (!startDate) {
-      newErrors.startDate = "Start date is required";
-    }
-
-    if (!endDate) {
-      newErrors.endDate = "End date is required";
-    }
-
-    if (!quota || parseInt(quota) < 1) {
-      newErrors.quota = "Max participants must be at least 1";
-    }
-
-    if (!eventLogo) {
-      newErrors.logo = "Event logo is required";
-    }
+    if (!location.trim()) newErrors.location = "Location is required";
+    if (!startDate) newErrors.startDate = "Start date is required";
+    if (!endDate) newErrors.endDate = "End date is required";
+    if (!quota || parseInt(quota) < 1) newErrors.quota = "Quota must be at least 1";
+    if (!eventLogo) newErrors.logo = "Event logo is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  /* Handle sport selection with type validation */
+  /* Handle sport toggle with validation */
   const handleSportToggle = (sportId: string) => {
     setSelectedSports((prev) => {
       const isSelected = prev.includes(sportId);
 
-      // Single event: only allow 1 sport
       if (eventType === "single") {
-        if (isSelected) {
-          // Clear error when fixed
-          if (errors.sports) {
-            setErrors((prev) => {
-              const { sports, ...rest } = prev;
-              return rest;
-            });
-          }
-          return [];
-        }
-        // Clear error when fixed
+        // Single: only 1 sport
         if (errors.sports) {
-          setErrors((prev) => {
-            const { sports, ...rest } = prev;
+          setErrors((e) => {
+            const { sports, ...rest } = e;
             return rest;
           });
         }
-        return [sportId];
+        return isSelected ? [] : [sportId];
       }
 
-      // Multi event: allow multiple
+      // Multi: allow multiple
       if (isSelected) {
         const updated = prev.filter((s) => s !== sportId);
-        // Clear error if still has at least 1
         if (errors.sports && updated.length >= 1) {
-          setErrors((prev) => {
-            const { sports, ...rest } = prev;
+          setErrors((e) => {
+            const { sports, ...rest } = e;
             return rest;
           });
         }
         return updated;
       }
 
-      // Clear error when fixed
       if (errors.sports) {
-        setErrors((prev) => {
-          const { sports, ...rest } = prev;
+        setErrors((e) => {
+          const { sports, ...rest } = e;
           return rest;
         });
       }
@@ -622,16 +589,12 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
   /* Handle event type change */
   const handleEventTypeChange = (newType: EventType) => {
     setEventType(newType);
-
-    // Reset sports based on new type
     if (newType === "single") {
       setSelectedSports((prev) => (prev.length > 0 ? [prev[0]] : []));
     }
-
-    // Clear sports error
     if (errors.sports) {
-      setErrors((prev) => {
-        const { sports, ...rest } = prev;
+      setErrors((e) => {
+        const { sports, ...rest } = e;
         return rest;
       });
     }
@@ -646,31 +609,28 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
     return `EVT-${String(maxId + 1).padStart(3, "0")}`;
   };
 
-  /* Handle form submission */
+  /* Handle create event */
   const handleCreateEvent = () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
-    // Create new event
-    const newEvent = {
+    const newEvent: SportEvent = {
       id: generateEventId(),
       name: eventName,
       type: eventType,
-      status: "upcoming" as const,
+      status: "upcoming",
       sports: selectedSports.map((id) => SPORT_OPTIONS.find((s) => s.id === id)!),
       location: {
         city: location,
         venue: "",
         coordinates: null,
         timezone: timezone || "Asia/Bangkok (GMT+7)",
-      } as EventLocation,
+      },
       startDate,
       endDate,
       maxParticipants: parseInt(quota),
       usedKeys: 0,
       totalKeys: parseInt(quota) * selectedSports.length,
-      visibility: (visibility === "public" ? "public" : "private") as "public" | "private",
+      visibility: visibility === "public" ? "public" : "private",
     };
 
     addEvent(newEvent);
