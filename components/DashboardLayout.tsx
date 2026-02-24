@@ -1,26 +1,28 @@
-import React, { useState } from "react";
-import { Sidebar } from "./components/Sidebar";
-import { TopHeader } from "./components/TopHeader";
-import { ScoreboardCards } from "./components/ScoreboardCards";
-import { EventsTable } from "./components/EventsTable";
-import { MedalTally } from "./components/MedalTally";
-import { ActivityFeed } from "./components/ActivityFeed";
-import { PerformanceChart } from "./components/PerformanceChart";
-import { CreateEventModal } from "./components/CreateEventModal";
-import { EventManagementPage } from "./components/EventManagementPage";
-import { KeyManagementPage } from "./components/KeyManagementPage";
-import { ParticipantsPage } from "./components/ParticipantsPage";
-import { CompetitionResultsPage } from "./components/CompetitionResultsPage";
-import { MedalStandingsPage } from "./components/MedalStandingsPage";
+"use client";
 
-export default function App() {
+import React, { useState } from "react";
+import { Sidebar } from "@/components/Sidebar";
+import { TopHeader } from "@/components/TopHeader";
+import { ScoreboardCards } from "@/components/ScoreboardCards";
+import { EventsTable } from "@/components/EventsTable";
+import { MedalTally } from "@/components/MedalTally";
+import { ActivityFeed } from "@/components/ActivityFeed";
+import { PerformanceChart } from "@/components/PerformanceChart";
+import { CreateEventModal } from "@/components/CreateEventModal";
+import { EventManagementPage } from "@/components/EventManagementPage";
+import { KeyManagementPage } from "@/components/KeyManagementPage";
+import { ParticipantsPage } from "@/components/ParticipantsPage";
+import { CompetitionResultsPage } from "@/components/CompetitionResultsPage";
+import { MedalStandingsPage } from "@/components/MedalStandingsPage";
+
+export function DashboardLayout() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const handleNavChange = (id: string) => {
     setActiveNav(id);
-    setSelectedEventId(null); // reset drill-down on nav change
+    setSelectedEventId(null);
   };
 
   const handleEventClick = (eventId: string) => {
@@ -65,7 +67,10 @@ export default function App() {
           <MedalStandingsPage />
         ) : (
           /* Scrollable Dashboard Content */
-          <main className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F8FAFC" }}>
+          <main
+            className="flex-1 overflow-y-auto"
+            style={{ backgroundColor: "#F8FAFC" }}
+          >
             <div className="px-6 py-6" style={{ maxWidth: "1600px" }}>
               {/* Page Title */}
               <div className="flex items-end justify-between mb-6">

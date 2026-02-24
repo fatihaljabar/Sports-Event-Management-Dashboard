@@ -201,6 +201,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
   const tabCounts: Record<FilterTab, number> = {
     all: EVENTS.length,
     active: EVENTS.filter((e) => e.status === "active").length,
+    inactive: EVENTS.filter((e) => e.status === "inactive").length,
     upcoming: EVENTS.filter((e) => e.status === "upcoming").length,
     completed: EVENTS.filter((e) => e.status === "completed").length,
     archived: EVENTS.filter((e) => e.status === "archived").length,
