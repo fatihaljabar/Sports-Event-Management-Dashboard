@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/fatih/.claude/**)",
+      "Bash(git add -A)"
+    ],
+    "additionalDirectories": [
+      "/Users/fatih/Downloads/Sports Event Management Dashboard/.claude"
+    ]
+  }
+}
