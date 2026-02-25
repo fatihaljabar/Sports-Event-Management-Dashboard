@@ -146,7 +146,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
       if (today > endDate) {
         calculatedStatus = "completed";
       } else if (today >= startDate && today <= endDate) {
-        calculatedStatus = "ongoing";
+        calculatedStatus = "active"; // Active when event is currently happening
       } else if (today < startDate) {
         calculatedStatus = "upcoming";
       }
