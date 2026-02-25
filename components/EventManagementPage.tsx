@@ -18,6 +18,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
+import { toast } from "sonner";
+import { deleteEvent as deleteEventAction } from "@/app/actions/events";
 
 /* ─────────────────────────────────────────────
    DATA
@@ -100,11 +102,38 @@ interface EventManagementPageProps {
 }
 
 export function EventManagementPage({ onCreateEvent, onEventClick }: EventManagementPageProps) {
-  const { events } = useEvents();
+  const { events, deleteEvent: deleteEventFromStore } = useEvents();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [search, setSearch] = useState("");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Handle delete event
+  const handleDeleteEvent = async (eventId: string, eventName: string) => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteEventAction(eventId);
+      if (result.success) {
+        // Remove from local store
+        deleteEventFromStore(eventId);
+        setDeleteConfirm(null);
+        toast.success("Event deleted successfully", {
+          description: `"${eventName}" has been removed.`,
+        });
+      } else {
+        toast.error("Failed to delete event", {
+          description: result.error || "Please try again.",
+        });
+      }
+    } catch (error) {
+      toast.error("An error occurred", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Convert events from store to the format expected by the component
   const convertedEvents: SportEvent[] = useMemo(() => {
@@ -482,6 +511,8 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
                       deleteConfirm={deleteConfirm}
                       setDeleteConfirm={setDeleteConfirm}
                       onEventClick={onEventClick}
+                      onDelete={handleDeleteEvent}
+                      isDeleting={isDeleting}
                     />
                   ))
                 )}
@@ -550,6 +581,8 @@ function EventRow({
   deleteConfirm,
   setDeleteConfirm,
   onEventClick,
+  onDelete,
+  isDeleting,
 }: {
   event: SportEvent;
   isLast: boolean;
@@ -558,18 +591,20 @@ function EventRow({
   deleteConfirm: string | null;
   setDeleteConfirm: (id: string | null) => void;
   onEventClick: (eventId: string) => void;
+  onDelete: (eventId: string, eventName: string) => Promise<void>;
+  isDeleting: boolean;
 }) {
   const status = STATUS_CONFIG[event.status];
   const days = DAYS_CONFIG[event.daysVariant];
 
-  const isDeleting = deleteConfirm === event.id;
+  const isConfirming = deleteConfirm === event.id;
 
   return (
     <tr
       onMouseEnter={() => onHover(event.id)}
       onMouseLeave={() => onHover(null)}
       style={{
-        backgroundColor: isDeleting
+        backgroundColor: isConfirming
           ? "#FFF5F5"
           : hovered
           ? "#F8FAFF"
@@ -901,7 +936,7 @@ function EventRow({
 
       {/* ── Actions ── */}
       <td style={{ padding: "14px 20px" }}>
-        {isDeleting ? (
+        {isConfirming ? (
           /* Delete confirmation inline */
           <div className="flex items-center gap-2 justify-end">
             <span
@@ -917,6 +952,7 @@ function EventRow({
             </span>
             <button
               onClick={() => setDeleteConfirm(null)}
+              disabled={isDeleting}
               className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 transition-colors"
               style={{
                 border: "1.5px solid #E2E8F0",
@@ -924,12 +960,14 @@ function EventRow({
                 fontSize: "0.72rem",
                 fontFamily: '"Inter", sans-serif',
                 backgroundColor: "#FFFFFF",
+                opacity: isDeleting ? 0.6 : 1,
               }}
             >
               Cancel
             </button>
             <button
-              onClick={() => setDeleteConfirm(null)}
+              onClick={() => onDelete(event.id, event.name)}
+              disabled={isDeleting}
               className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 transition-colors"
               style={{
                 backgroundColor: "#EF4444",
@@ -938,10 +976,23 @@ function EventRow({
                 fontFamily: '"Inter", sans-serif',
                 fontWeight: 500,
                 border: "none",
+                opacity: isDeleting ? 0.7 : 1,
               }}
             >
-              <Trash2 className="w-3 h-3" strokeWidth={2} />
-              Confirm
+              {isDeleting ? (
+                <>
+                  <svg className="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-3 h-3" strokeWidth={2} />
+                  Confirm
+                </>
+              )}
             </button>
           </div>
         ) : (
