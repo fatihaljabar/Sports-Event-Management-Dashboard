@@ -362,10 +362,74 @@ export async function getEventById(eventId: string): Promise<SportEvent | null> 
 }
 
 /**
- * Delete an event
+ * Delete an event and its associated images from storage
  */
 export async function deleteEvent(eventId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = createServiceClient();
+
+    // First, fetch the event to get logo URLs
+    const event = await prisma.sportEvent.findUnique({
+      where: { eventId },
+    });
+
+    if (!event) {
+      return {
+        success: false,
+        error: "Event not found",
+      };
+    }
+
+    // Delete event logo from storage
+    if (event.logoUrl) {
+      try {
+        // Extract path from URL
+        const url = new URL(event.logoUrl);
+        const pathParts = url.pathname.split("/");
+        // Path format: /storage/v1/object/public/bucket-name/path/to/file
+        const bucketIndex = pathParts.indexOf("event-logos");
+        if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
+          const storagePath = pathParts.slice(bucketIndex).join("/");
+          const { error: deleteError } = await supabase.storage
+            .from("event-logos")
+            .remove([storagePath]);
+          if (deleteError) {
+            console.error("Error deleting event logo from storage:", deleteError);
+          } else {
+            console.log("Deleted event logo:", storagePath);
+          }
+        }
+      } catch (error) {
+        console.error("Exception deleting event logo:", error);
+      }
+    }
+
+    // Delete sponsor logos from storage
+    if (event.sponsorLogos) {
+      const sponsorLogos = event.sponsorLogos as unknown as SponsorLogoData[];
+      for (const sponsor of sponsorLogos) {
+        try {
+          const url = new URL(sponsor.url);
+          const pathParts = url.pathname.split("/");
+          const bucketIndex = pathParts.indexOf("event-logos");
+          if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
+            const storagePath = pathParts.slice(bucketIndex).join("/");
+            const { error: deleteError } = await supabase.storage
+              .from("event-logos")
+              .remove([storagePath]);
+            if (deleteError) {
+              console.error("Error deleting sponsor logo from storage:", deleteError);
+            } else {
+              console.log("Deleted sponsor logo:", storagePath);
+            }
+          }
+        } catch (error) {
+          console.error("Exception deleting sponsor logo:", error);
+        }
+      }
+    }
+
+    // Delete event from database
     await prisma.sportEvent.delete({
       where: { eventId },
     });
