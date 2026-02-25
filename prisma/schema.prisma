@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SportEvent {
+  id               String   @id @default(uuid())
+  eventId          String   @unique
+  name             String
+  type             String
+  status           String   @default("upcoming")
+  locationCity     String
+  locationVenue    String?
+  locationTimezone String
+  coordinates      Json?
+  startDate        DateTime
+  endDate          DateTime
+  maxParticipants  Int
+  usedKeys         Int      @default(0)
+  totalKeys        Int
+  visibility       String   @default("public")
+  sports           Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("sport_events")
+}
+
+enum EventType {
+  SINGLE
+  MULTI
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+}

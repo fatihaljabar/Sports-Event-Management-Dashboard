@@ -7,6 +7,7 @@ interface StyledInputProps {
   type?: string;
   icon?: React.ReactNode;
   suffix?: React.ReactNode;
+  disabled?: boolean;
 }
 
 export function StyledInput({
@@ -16,6 +17,7 @@ export function StyledInput({
   type = "text",
   icon,
   suffix,
+  disabled = false,
 }: StyledInputProps) {
   const [focused, setFocused] = useState(false);
 
@@ -24,11 +26,12 @@ export function StyledInput({
       className="flex items-center relative rounded-xl overflow-hidden"
       style={{
         border: `1.5px solid ${focused ? "#2563EB" : "#E2E8F0"}`,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: disabled ? "#F8FAFC" : "#FFFFFF",
         boxShadow: focused
           ? "0 0 0 3px rgba(37,99,235,0.08)"
           : "0 1px 2px rgba(0,0,0,0.03)",
         transition: "border-color 0.15s, box-shadow 0.15s",
+        opacity: disabled ? 0.6 : 1,
       }}
     >
       {icon && (
@@ -44,8 +47,9 @@ export function StyledInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        onFocus={() => setFocused(true)}
+        onFocus={() => !disabled && setFocused(true)}
         onBlur={() => setFocused(false)}
+        disabled={disabled}
         style={{
           flex: 1,
           padding: icon ? "0.625rem 0.75rem" : "0.625rem 0.875rem",
@@ -55,6 +59,7 @@ export function StyledInput({
           fontSize: "0.85rem",
           fontFamily: '"Inter", sans-serif',
           color: "#1E293B",
+          cursor: disabled ? "not-allowed" : "text",
         }}
       />
       {suffix && (

@@ -1,25 +1,20 @@
 import { useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useEvents } from "@/lib/stores/event-store";
 import type { SportEvent } from "@/lib/types/event";
-import { generateEventId, calculateTotalKeys, getTimezoneByLocation, getSportsByIds } from "@/lib/utils/create-event-helpers";
+import { calculateTotalKeys, getTimezoneByLocation, getSportsByIds } from "@/lib/utils/create-event-helpers";
 import { validateCreateEventData, clearError } from "@/lib/utils/create-event-validation";
-import type { UploadedFile } from "@/components/ui/DropZone";
+import { createEvent } from "@/app/actions/events";
+import type { UploadedFile } from "@/components/ui/SponsorLogosUploader";
 
 export type EventType = "single" | "multi";
-
-export interface SponsorLogoData {
-  id: string;
-  name: string;
-  size: string;
-  file: File | null;
-}
 
 export interface UseCreateEventFormProps {
   onClose: () => void;
 }
 
 export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
-  const { events, addEvent } = useEvents();
+  const { addEvent } = useEvents();
 
   // Form state
   const [eventName, setEventName] = useState("");
@@ -31,10 +26,10 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
   const [endDate, setEndDate] = useState("");
   const [quota, setQuota] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
-  const [eventLogo, setEventLogo] = useState<File | null>(null);
-  const [eventLogoPreview, setEventLogoPreview] = useState<UploadedFile | null>(null);
-  const [sponsorLogos, setSponsorLogos] = useState<SponsorLogoData[]>([]);
+  const [eventLogo, setEventLogo] = useState<UploadedFile | null>(null);
+  const [sponsorLogos, setSponsorLogos] = useState<UploadedFile[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Clear specific error
   const clearSpecificError = useCallback((key: string) => {
@@ -82,15 +77,33 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     clearSpecificError("sports");
   }, [clearSpecificError]);
 
-  // Handle location change with timezone detection
-  const handleLocationChange = useCallback((value: string) => {
+  // Handle location change with timezone detection (from LocationPicker)
+  const handleLocationChange = useCallback((value: string, timezoneFromPicker?: string) => {
     setLocation(value);
-    const detectedTimezone = getTimezoneByLocation(value);
-    setTimezone(detectedTimezone);
+    // Use timezone from picker if provided, otherwise fallback to detection
+    if (timezoneFromPicker) {
+      setTimezone(timezoneFromPicker);
+    } else {
+      const detectedTimezone = getTimezoneByLocation(value);
+      setTimezone(detectedTimezone);
+    }
+  }, []);
+
+  // Handle sponsor logo add
+  const handleAddSponsorLogo = useCallback((logo: UploadedFile) => {
+    setSponsorLogos((prev) => [...prev, logo]);
+  }, []);
+
+  // Handle sponsor logo remove
+  const handleRemoveSponsorLogo = useCallback((index: number) => {
+    setSponsorLogos((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   // Validate form
   const validateForm = useCallback((): boolean => {
+    // Convert UploadedFile to File for validation (eventLogo is required)
+    const eventLogoFile = eventLogo ? { name: eventLogo.name, size: 1 } as File : null;
+
     const result = validateCreateEventData({
       eventName,
       eventType,
@@ -99,42 +112,58 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
       startDate,
       endDate,
       quota,
-      eventLogo,
+      eventLogo: eventLogoFile,
     });
 
     setErrors(result.errors);
     return result.isValid;
   }, [eventName, eventType, selectedSports, location, startDate, endDate, quota, eventLogo]);
 
-  // Handle form submission
-  const handleCreateEvent = useCallback(() => {
+  // Handle form submission with Server Action
+  const handleCreateEvent = useCallback(async () => {
     if (!validateForm()) {
       return;
     }
 
-    const newEvent: SportEvent = {
-      id: generateEventId(events),
-      name: eventName,
-      type: eventType,
-      status: "upcoming",
-      sports: getSportsByIds(selectedSports),
-      location: {
-        city: location,
-        venue: "",
-        coordinates: null,
-        timezone: timezone || "Asia/Bangkok (GMT+7)",
-      },
-      startDate,
-      endDate,
-      maxParticipants: parseInt(quota),
-      usedKeys: 0,
-      totalKeys: calculateTotalKeys(parseInt(quota), selectedSports.length),
-      visibility,
-    };
+    setIsSubmitting(true);
 
-    addEvent(newEvent);
-    onClose();
-  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, quota, visibility, events, addEvent, onClose, validateForm]);
+    try {
+      const result = await createEvent({
+        name: eventName,
+        type: eventType,
+        sports: getSportsByIds(selectedSports),
+        locationCity: location,
+        locationTimezone: timezone || "Asia/Bangkok (GMT+7)",
+        startDate,
+        endDate,
+        maxParticipants: parseInt(quota),
+        totalKeys: calculateTotalKeys(parseInt(quota), selectedSports.length),
+        visibility,
+      });
+
+      if (result.success && result.event) {
+        // Update local store
+        addEvent(result.event);
+        toast.success("Event created successfully", {
+          description: `"${eventName}" has been added to your events.`,
+        });
+        onClose();
+      } else {
+        // Show server error
+        setErrors({ server: result.error || "Failed to create event" });
+        toast.error("Failed to create event", {
+          description: result.error || "Please check your input and try again.",
+        });
+      }
+    } catch (error) {
+      setErrors({ server: error instanceof Error ? error.message : "An unexpected error occurred" });
+      toast.error("An unexpected error occurred", {
+        description: error instanceof Error ? error.message : "Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, quota, visibility, addEvent, onClose, validateForm]);
 
   // Reset form
   const resetForm = useCallback(() => {
@@ -148,9 +177,9 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     setQuota("");
     setVisibility("public");
     setEventLogo(null);
-    setEventLogoPreview(null);
     setSponsorLogos([]);
     setErrors({});
+    setIsSubmitting(false);
   }, []);
 
   return {
@@ -171,16 +200,17 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     setVisibility,
     eventLogo,
     setEventLogo,
-    eventLogoPreview,
-    setEventLogoPreview,
     sponsorLogos,
     setSponsorLogos,
     errors,
+    isSubmitting,
 
     // Actions
     handleSportToggle,
     handleEventTypeChange,
     handleLocationChange,
+    handleAddSponsorLogo,
+    handleRemoveSponsorLogo,
     handleCreateEvent,
     resetForm,
     setLocation,

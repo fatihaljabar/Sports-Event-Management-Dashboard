@@ -1,5 +1,6 @@
 import type { SportEvent } from "@/lib/types/event";
-import { SPORT_OPTIONS } from "@/lib/constants/event-constants";
+import { getSportsByIds as getSportsFromConstants } from "@/lib/constants/sports";
+import { getTimezoneByLocation } from "@/lib/constants/locations";
 
 /**
  * Generate next event ID based on existing events
@@ -21,37 +22,11 @@ export function calculateTotalKeys(quota: number, sportsCount: number): number {
 }
 
 /**
- * Get timezone by location (simplified - in production use proper timezone API)
+ * Get timezone by location
  */
-export function getTimezoneByLocation(location: string): string {
-  const timezoneMap: Record<string, string> = {
-    "tokyo": "Asia/Tokyo (GMT+9)",
-    "jakarta": "Asia/Jakarta (GMT+7)",
-    "bangkok": "Asia/Bangkok (GMT+7)",
-    "singapore": "Asia/Singapore (GMT+8)",
-    "kuala lumpur": "Asia/Kuala_Lumpur (GMT+8)",
-    "manila": "Asia/Manila (GMT+8)",
-    "hanoi": "Asia/Ho_Chi_Minh (GMT+7)",
-    "beijing": "Asia/Shanghai (GMT+8)",
-    "seoul": "Asia/Seoul (GMT+9)",
-    "taipei": "Asia/Taipei (GMT+8)",
-    "hong kong": "Asia/Hong_Kong (GMT+8)",
-    "osaka": "Asia/Tokyo (GMT+9)",
-    "kyoto": "Asia/Tokyo (GMT+9)",
-  };
-
-  const lowerLocation = location.toLowerCase();
-  for (const [key, value] of Object.entries(timezoneMap)) {
-    if (lowerLocation.includes(key)) {
-      return value;
-    }
-  }
-  return "Asia/Bangkok (GMT+7)"; // Default
-}
+export { getTimezoneByLocation };
 
 /**
  * Get sport categories by IDs
  */
-export function getSportsByIds(sportIds: string[]) {
-  return sportIds.map((id) => SPORT_OPTIONS.find((s) => s.id === id)!).filter(Boolean);
-}
+export { getSportsFromConstants as getSportsByIds };
