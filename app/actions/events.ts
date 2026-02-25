@@ -66,7 +66,7 @@ async function uploadEventLogo(
     const buffer = Buffer.from(base64Data, "base64");
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from("event-logos")
       .upload(storagePath, buffer, {
         contentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
@@ -126,7 +126,9 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
     // Upload logo if provided
     let logoUrl: string | null = null;
     if (data.logoBase64 && data.logoFileName) {
+      console.log("Uploading logo for event:", eventId);
       logoUrl = await uploadEventLogo(data.logoBase64, data.logoFileName, eventId);
+      console.log("Logo uploaded, URL:", logoUrl);
     }
 
     // Create event in database
