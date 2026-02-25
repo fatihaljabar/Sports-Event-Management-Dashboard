@@ -22,7 +22,7 @@ import { useEvents } from "@/lib/stores/event-store";
 /* ─────────────────────────────────────────────
    DATA
 ───────────────────────────────────────────── */
-type EventStatus = "active" | "inactive" | "upcoming" | "ongoing" | "completed" | "archived";
+type EventStatus = "active" | "inactive" | "upcoming" | "completed" | "archived";
 type EventType = "multi" | "single";
 
 interface SportEvent {
@@ -50,7 +50,6 @@ const TABS: { id: FilterTab; label: string; icon: React.ReactNode }[] = [
   { id: "all", label: "All Events", icon: <Layers className="w-3.5 h-3.5" strokeWidth={1.75} /> },
   { id: "active", label: "Active", icon: <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.75} /> },
   { id: "upcoming", label: "Upcoming", icon: <CalendarClock className="w-3.5 h-3.5" strokeWidth={1.75} /> },
-  { id: "ongoing", label: "Ongoing", icon: <Calendar className="w-3.5 h-3.5" strokeWidth={1.75} /> },
   { id: "completed", label: "Completed", icon: <Trophy className="w-3.5 h-3.5" strokeWidth={1.75} /> },
   { id: "archived", label: "Archived", icon: <Archive className="w-3.5 h-3.5" strokeWidth={1.75} /> },
 ];
@@ -59,7 +58,6 @@ const STATUS_CONFIG: Record<EventStatus, { label: string; bg: string; color: str
   active:    { label: "Active",    bg: "#DCFCE7", color: "#15803D", dot: "#22C55E" },
   inactive:  { label: "Inactive",  bg: "#FEE2E2", color: "#DC2626", dot: "#EF4444" },
   upcoming:  { label: "Upcoming",  bg: "#DBEAFE", color: "#1D4ED8", dot: "#3B82F6" },
-  ongoing:   { label: "Ongoing",   bg: "#FEF3C7", color: "#D97706", dot: "#F59E0B" },
   completed: { label: "Completed", bg: "#F3F4F6", color: "#374151", dot: "#9CA3AF" },
   archived:  { label: "Archived",  bg: "#F1F5F9", color: "#64748B", dot: "#94A3B8" },
 };
@@ -178,7 +176,6 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
     active: convertedEvents.filter((e) => e.status === "active").length,
     inactive: convertedEvents.filter((e) => e.status === "inactive").length,
     upcoming: convertedEvents.filter((e) => e.status === "upcoming").length,
-    ongoing: convertedEvents.filter((e) => e.status === "ongoing").length,
     completed: convertedEvents.filter((e) => e.status === "completed").length,
     archived: convertedEvents.filter((e) => e.status === "archived").length,
   };
