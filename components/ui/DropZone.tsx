@@ -16,6 +16,16 @@ interface DropZoneProps {
   accentColor?: string;
 }
 
+// Helper to read file as base64
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export function DropZone({
   label,
   sublabel,
@@ -27,12 +37,18 @@ export function DropZone({
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) {
+  const processFile = useCallback(
+    async (file: File) => {
+      try {
+        const base64 = await readFileAsBase64(file);
+        onUpload({
+          name: file.name,
+          size: `${(file.size / 1024).toFixed(0)} KB`,
+          preview: base64,
+        });
+      } catch (error) {
+        console.error("Error reading file:", error);
+        // Fallback to null if reading fails
         onUpload({
           name: file.name,
           size: `${(file.size / 1024).toFixed(0)} KB`,
@@ -43,14 +59,22 @@ export function DropZone({
     [onUpload]
   );
 
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        processFile(file);
+      }
+    },
+    [processFile]
+  );
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onUpload({
-        name: file.name,
-        size: `${(file.size / 1024).toFixed(0)} KB`,
-        preview: null,
-      });
+      processFile(file);
     }
   };
 

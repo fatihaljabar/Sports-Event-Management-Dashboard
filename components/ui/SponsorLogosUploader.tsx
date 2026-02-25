@@ -18,6 +18,16 @@ interface SponsorLogosUploaderProps {
 
 const MAX_LOGOS = 5;
 
+// Helper to read file as base64
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export function SponsorLogosUploader({
   logos,
   onAdd,
@@ -26,13 +36,18 @@ export function SponsorLogosUploader({
 }: SponsorLogosUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      if (logos.length >= MAX_LOGOS) return;
-
-      const file = e.dataTransfer.files[0];
-      if (file) {
+  const processFile = useCallback(
+    async (file: File) => {
+      try {
+        const base64 = await readFileAsBase64(file);
+        onAdd({
+          name: file.name,
+          size: `${(file.size / 1024).toFixed(0)} KB`,
+          preview: base64,
+        });
+      } catch (error) {
+        console.error("Error reading file:", error);
+        // Fallback to null if reading fails
         onAdd({
           name: file.name,
           size: `${(file.size / 1024).toFixed(0)} KB`,
@@ -40,7 +55,20 @@ export function SponsorLogosUploader({
         });
       }
     },
-    [logos.length, onAdd]
+    [onAdd]
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      if (logos.length >= MAX_LOGOS) return;
+
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        processFile(file);
+      }
+    },
+    [logos.length, processFile]
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,11 +76,7 @@ export function SponsorLogosUploader({
 
     const file = e.target.files?.[0];
     if (file) {
-      onAdd({
-        name: file.name,
-        size: `${(file.size / 1024).toFixed(0)} KB`,
-        preview: null,
-      });
+      processFile(file);
     }
   };
 
