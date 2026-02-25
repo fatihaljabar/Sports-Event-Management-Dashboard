@@ -2,12 +2,12 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import type { SportEvent } from "@/lib/types/event";
+import type { SportEvent, SportCategory } from "@/lib/types/event";
 
 export interface CreateEventData {
   name: string;
   type: "single" | "multi";
-  sports: SportEvent["sports"];
+  sports: SportCategory[];
   locationCity: string;
   locationTimezone: string;
   startDate: string;
@@ -86,14 +86,14 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
         locationCity: data.locationCity,
         locationVenue: null,
         locationTimezone: data.locationTimezone,
-        coordinates: null,
+        coordinates: null as unknown as undefined,
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         maxParticipants: data.maxParticipants,
         usedKeys: 0,
         totalKeys: data.totalKeys,
         visibility: data.visibility,
-        sports: data.sports,
+        sports: data.sports as unknown as Record<string, never>,
       },
     });
 
@@ -106,12 +106,12 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
       id: event.eventId,
       name: event.name,
       type: event.type as "single" | "multi",
-      status: event.status as "upcoming" | "ongoing" | "completed",
-      sports: event.sports as SportEvent["sports"],
+      status: event.status as SportEvent["status"],
+      sports: event.sports as unknown as SportEvent["sports"],
       location: {
         city: event.locationCity,
         venue: event.locationVenue ?? "",
-        coordinates: event.coordinates,
+        coordinates: null,
         timezone: event.locationTimezone,
       },
       startDate: event.startDate.toISOString(),
@@ -145,12 +145,12 @@ export async function getEvents(): Promise<SportEvent[]> {
       id: event.eventId,
       name: event.name,
       type: event.type as "single" | "multi",
-      status: event.status as "upcoming" | "ongoing" | "completed",
-      sports: event.sports as SportEvent["sports"],
+      status: event.status as SportEvent["status"],
+      sports: event.sports as unknown as SportEvent["sports"],
       location: {
         city: event.locationCity,
         venue: event.locationVenue ?? "",
-        coordinates: event.coordinates,
+        coordinates: null,
         timezone: event.locationTimezone,
       },
       startDate: event.startDate.toISOString(),
@@ -181,12 +181,12 @@ export async function getEventById(eventId: string): Promise<SportEvent | null> 
       id: event.eventId,
       name: event.name,
       type: event.type as "single" | "multi",
-      status: event.status as "upcoming" | "ongoing" | "completed",
-      sports: event.sports as SportEvent["sports"],
+      status: event.status as SportEvent["status"],
+      sports: event.sports as unknown as SportEvent["sports"],
       location: {
         city: event.locationCity,
         venue: event.locationVenue ?? "",
-        coordinates: event.coordinates,
+        coordinates: null,
         timezone: event.locationTimezone,
       },
       startDate: event.startDate.toISOString(),
