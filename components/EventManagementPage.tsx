@@ -109,11 +109,12 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
 
   // Convert events from store to the format expected by the component
   const convertedEvents: SportEvent[] = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     return events.map((event) => {
       const startDate = new Date(event.startDate);
       const endDate = new Date(event.endDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
       startDate.setHours(0, 0, 0, 0);
       endDate.setHours(0, 0, 0, 0);
 
@@ -140,6 +141,16 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
         return `${months[date.getMonth()]} ${String(date.getDate()).padStart(2, "0")}`;
       };
 
+      // Calculate dynamic status based on dates
+      let calculatedStatus: EventStatus = "upcoming";
+      if (today > endDate) {
+        calculatedStatus = "completed";
+      } else if (today >= startDate && today <= endDate) {
+        calculatedStatus = "ongoing";
+      } else if (today < startDate) {
+        calculatedStatus = "upcoming";
+      }
+
       // Generate logo from event name
       const initials = event.name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
       const emoji = event.sports[0]?.emoji || "🏆";
@@ -153,7 +164,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
         endDate: formatDisplayDate(endDate),
         daysLabel,
         daysVariant,
-        status: event.status,
+        status: calculatedStatus, // Use dynamically calculated status
         sports: event.sports.map((s) => s.emoji),
         location: `${event.location.city}${event.location.venue ? `, ${event.location.venue}` : ""}`,
         usedKeys: event.usedKeys,
