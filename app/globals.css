@@ -139,25 +139,35 @@
 }
 
 /* Sonner Toast Override */
+/* Default/Success toast - hijau soft */
 [data-sonner-toast] {
-  background: #2563EB !important;
-  color: #FFFFFF !important;
-  border-color: #1D4ED8 !important;
-  border: 2px solid #1D4ED8 !important;
+  background: #DCFCE7 !important;
+  color: #15803D !important;
+  border-color: #86EFAC !important;
+  border: 2px solid #86EFAC !important;
 }
 
 [data-sonner-toast] [data-title] {
-  color: #FFFFFF !important;
+  color: #15803D !important;
 }
 
 [data-sonner-toast] [data-description] {
-  color: #DBEAFE !important;
+  color: #166534 !important;
 }
 
 /* Error toast - merah untuk error */
 [data-sonner-toast][data-type="error"] {
   background: #EF4444 !important;
   border-color: #DC2626 !important;
+  color: #FFFFFF !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-title] {
+  color: #FFFFFF !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-description] {
+  color: #FEE2E2 !important;
 }
 
 /* Delete toast - merah soft untuk delete action */
