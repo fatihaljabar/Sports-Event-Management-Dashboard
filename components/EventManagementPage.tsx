@@ -9,12 +9,10 @@ import {
   Calendar,
   Clock,
   ChevronDown,
-  Filter,
   MoreHorizontal,
   ArrowUpDown,
   Layers,
   CheckCircle2,
-  XCircle,
   Archive,
   CalendarClock,
   SlidersHorizontal,
@@ -24,7 +22,7 @@ import { useEvents } from "@/lib/stores/event-store";
 /* ─────────────────────────────────────────────
    DATA
 ───────────────────────────────────────────── */
-type EventStatus = "active" | "inactive" | "upcoming" | "completed" | "archived";
+type EventStatus = "active" | "inactive" | "upcoming" | "ongoing" | "completed" | "archived";
 type EventType = "multi" | "single";
 
 interface SportEvent {
@@ -43,99 +41,6 @@ interface SportEvent {
   totalKeys: number;
 }
 
-const EVENTS: SportEvent[] = [
-  {
-    id: "EVT-001",
-    logo: { bg: "linear-gradient(135deg,#2563EB,#7C3AED)", text: "AG", emoji: "🏆" },
-    name: "Asian Games 2026",
-    type: "multi",
-    startDate: "Mar 09",
-    endDate: "Mar 22",
-    daysLabel: "13 Days Left",
-    daysVariant: "warning",
-    status: "active",
-    sports: ["🏃", "🏊", "🚴", "🤸", "🥊"],
-    location: "Nagoya, Japan",
-    usedKeys: 9840,
-    totalKeys: 12000,
-  },
-  {
-    id: "EVT-002",
-    logo: { bg: "linear-gradient(135deg,#059669,#0D9488)", text: "UC", emoji: "⚽" },
-    name: "Unesa Cup",
-    type: "single",
-    startDate: "Feb 26",
-    endDate: "Mar 02",
-    daysLabel: "2 Days Left",
-    daysVariant: "urgent",
-    status: "active",
-    sports: ["⚽"],
-    location: "Surabaya, Indonesia",
-    usedKeys: 308,
-    totalKeys: 320,
-  },
-  {
-    id: "EVT-003",
-    logo: { bg: "linear-gradient(135deg,#64748B,#475569)", text: "OW", emoji: "⛷️" },
-    name: "Olympic Winter Games",
-    type: "multi",
-    startDate: "Jan 10",
-    endDate: "Jan 26",
-    daysLabel: "Ended",
-    daysVariant: "ended",
-    status: "inactive",
-    sports: ["⛷️", "🏒", "⛸️"],
-    location: "Milan, Italy",
-    usedKeys: 8400,
-    totalKeys: 8400,
-  },
-  {
-    id: "EVT-004",
-    logo: { bg: "linear-gradient(135deg,#F59E0B,#EF4444)", text: "WA", emoji: "🏃" },
-    name: "World Athletics Championship",
-    type: "single",
-    startDate: "Apr 15",
-    endDate: "Apr 24",
-    daysLabel: "49 Days Left",
-    daysVariant: "far",
-    status: "upcoming",
-    sports: ["🏃"],
-    location: "Tokyo, Japan",
-    usedKeys: 450,
-    totalKeys: 2800,
-  },
-  {
-    id: "EVT-005",
-    logo: { bg: "linear-gradient(135deg,#0EA5E9,#2563EB)", text: "AP", emoji: "♿" },
-    name: "ASEAN Para Games",
-    type: "multi",
-    startDate: "Dec 12",
-    endDate: "Dec 19",
-    daysLabel: "Ended",
-    daysVariant: "ended",
-    status: "completed",
-    sports: ["🏊", "🏋️", "🎾"],
-    location: "Bangkok, Thailand",
-    usedKeys: 1760,
-    totalKeys: 1950,
-  },
-  {
-    id: "EVT-006",
-    logo: { bg: "linear-gradient(135deg,#7C3AED,#C026D3)", text: "NS", emoji: "🏊" },
-    name: "National Swimming Championship",
-    type: "single",
-    startDate: "Nov 05",
-    endDate: "Nov 09",
-    daysLabel: "Ended",
-    daysVariant: "ended",
-    status: "archived",
-    sports: ["🏊"],
-    location: "Jakarta, Indonesia",
-    usedKeys: 540,
-    totalKeys: 540,
-  },
-];
-
 /* ─────────────────────────────────────────────
    HELPERS
 ───────────────────────────────────────────── */
@@ -145,6 +50,7 @@ const TABS: { id: FilterTab; label: string; icon: React.ReactNode }[] = [
   { id: "all", label: "All Events", icon: <Layers className="w-3.5 h-3.5" strokeWidth={1.75} /> },
   { id: "active", label: "Active", icon: <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.75} /> },
   { id: "upcoming", label: "Upcoming", icon: <CalendarClock className="w-3.5 h-3.5" strokeWidth={1.75} /> },
+  { id: "ongoing", label: "Ongoing", icon: <Calendar className="w-3.5 h-3.5" strokeWidth={1.75} /> },
   { id: "completed", label: "Completed", icon: <Trophy className="w-3.5 h-3.5" strokeWidth={1.75} /> },
   { id: "archived", label: "Archived", icon: <Archive className="w-3.5 h-3.5" strokeWidth={1.75} /> },
 ];
@@ -153,6 +59,7 @@ const STATUS_CONFIG: Record<EventStatus, { label: string; bg: string; color: str
   active:    { label: "Active",    bg: "#DCFCE7", color: "#15803D", dot: "#22C55E" },
   inactive:  { label: "Inactive",  bg: "#FEE2E2", color: "#DC2626", dot: "#EF4444" },
   upcoming:  { label: "Upcoming",  bg: "#DBEAFE", color: "#1D4ED8", dot: "#3B82F6" },
+  ongoing:   { label: "Ongoing",   bg: "#FEF3C7", color: "#D97706", dot: "#F59E0B" },
   completed: { label: "Completed", bg: "#F3F4F6", color: "#374151", dot: "#9CA3AF" },
   archived:  { label: "Archived",  bg: "#F1F5F9", color: "#64748B", dot: "#94A3B8" },
 };
@@ -206,18 +113,32 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
       const startDate = new Date(event.startDate);
       const endDate = new Date(event.endDate);
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+
       const daysUntil = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
       let daysVariant: "urgent" | "warning" | "upcoming" | "ended" | "far" = "far";
       if (today > endDate) daysVariant = "ended";
-      else if (daysUntil <= 7) daysVariant = "urgent";
-      else if (daysUntil <= 14) daysVariant = "warning";
-      else if (daysUntil <= 30) daysVariant = "upcoming";
+      else if (daysUntil <= 7 && daysUntil >= 0) daysVariant = "urgent";
+      else if (daysUntil <= 14 && daysUntil > 7) daysVariant = "warning";
+      else if (daysUntil <= 30 && daysUntil > 14) daysVariant = "upcoming";
 
-      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      const daysLabel = daysDiff > 0
-        ? `${daysDiff} days`
-        : `${Math.abs(daysDiff)} days`;
+      // Calculate days remaining until event ends
+      const daysUntilEnd = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      let daysLabel: string;
+      if (today > endDate) {
+        daysLabel = "Ended";
+      } else {
+        daysLabel = `${daysUntilEnd} Days Left`;
+      }
+
+      // Format dates for display (e.g., "Mar 09")
+      const formatDisplayDate = (date: Date) => {
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${months[date.getMonth()]} ${String(date.getDate()).padStart(2, "0")}`;
+      };
 
       // Generate logo from event name
       const initials = event.name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
@@ -225,11 +146,11 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
 
       return {
         id: event.id,
-        logo: { bg: "linear-gradient(135deg,#2563BD,#7C3AED)", text: initials, emoji },
+        logo: { bg: "linear-gradient(135deg,#2563EB,#7C3AED)", text: initials, emoji },
         name: event.name,
         type: event.type,
-        startDate: event.startDate,
-        endDate: event.endDate,
+        startDate: formatDisplayDate(startDate),
+        endDate: formatDisplayDate(endDate),
         daysLabel,
         daysVariant,
         status: event.status,
@@ -246,6 +167,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
     active: convertedEvents.filter((e) => e.status === "active").length,
     inactive: convertedEvents.filter((e) => e.status === "inactive").length,
     upcoming: convertedEvents.filter((e) => e.status === "upcoming").length,
+    ongoing: convertedEvents.filter((e) => e.status === "ongoing").length,
     completed: convertedEvents.filter((e) => e.status === "completed").length,
     archived: convertedEvents.filter((e) => e.status === "archived").length,
   };
@@ -575,7 +497,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
               </span>{" "}
               of{" "}
               <span style={{ color: "#374151", fontWeight: 500 }}>
-                {EVENTS.length}
+                {convertedEvents.length}
               </span>{" "}
               events
             </span>
