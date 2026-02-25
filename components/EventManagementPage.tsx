@@ -20,6 +20,7 @@ import {
 import { useEvents } from "@/lib/stores/event-store";
 import { toast } from "sonner";
 import { deleteEvent as deleteEventAction } from "@/app/actions/events";
+import type { SponsorLogoData } from "@/lib/types/event";
 
 /* ─────────────────────────────────────────────
    DATA
@@ -42,6 +43,7 @@ interface SportEvent {
   usedKeys: number;
   totalKeys: number;
   logoUrl?: string; // URL to uploaded logo image
+  sponsorLogos?: SponsorLogoData[]; // Sponsor logos
 }
 
 /* ─────────────────────────────────────────────
@@ -199,6 +201,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
         usedKeys: event.usedKeys,
         totalKeys: event.totalKeys,
         logoUrl: event.logoUrl, // Pass through uploaded logo URL
+        sponsorLogos: event.sponsorLogos, // Pass through sponsor logos
       };
     });
   }, [events]);
@@ -464,12 +467,13 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
               <thead>
                 <tr style={{ backgroundColor: "#FAFBFC" }}>
                   {[
-                    { label: "Event Identity", width: "30%" },
-                    { label: "Type", width: "12%" },
-                    { label: "Timeline", width: "18%" },
-                    { label: "Status", width: "11%" },
-                    { label: "Key Usage", width: "13%" },
-                    { label: "Actions", width: "16%", align: "right" as const },
+                    { label: "Event Identity", width: "28%" },
+                    { label: "Type", width: "11%" },
+                    { label: "Sponsors", width: "10%" },
+                    { label: "Timeline", width: "16%" },
+                    { label: "Status", width: "10%" },
+                    { label: "Key Usage", width: "12%" },
+                    { label: "Actions", width: "13%", align: "right" as const },
                   ].map((col) => (
                     <th
                       key={col.label}
@@ -778,6 +782,56 @@ function EventRow({
                 1 sport
               </p>
             </div>
+          </div>
+        )}
+      </td>
+
+      {/* ── Sponsors ── */}
+      <td style={{ padding: "14px 20px" }}>
+        {!event.sponsorLogos || event.sponsorLogos.length === 0 ? (
+          <span
+            style={{
+              color: "#CBD5E1",
+              fontSize: "0.75rem",
+              fontFamily: '"Inter", sans-serif',
+            }}
+          >
+            —
+          </span>
+        ) : (
+          <div className="flex items-center gap-1">
+            {event.sponsorLogos.slice(0, 3).map((sponsor, idx) => (
+              <img
+                key={idx}
+                src={sponsor.url}
+                alt={sponsor.name}
+                style={{
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "4px",
+                  objectFit: "contain",
+                  backgroundColor: "#F8FAFC",
+                  border: "1px solid #E2E8F0",
+                }}
+                title={sponsor.name}
+              />
+            ))}
+            {event.sponsorLogos.length > 3 && (
+              <span
+                style={{
+                  color: "#64748B",
+                  fontSize: "0.6rem",
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontWeight: 500,
+                  backgroundColor: "#F1F5F9",
+                  borderRadius: "4px",
+                  padding: "2px 5px",
+                  border: "1px solid #E2E8F0",
+                }}
+              >
+                +{event.sponsorLogos.length - 3}
+              </span>
+            )}
           </div>
         )}
       </td>

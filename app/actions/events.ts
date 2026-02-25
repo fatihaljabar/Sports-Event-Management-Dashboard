@@ -121,17 +121,21 @@ async function uploadSponsorLogos(
   const results: SponsorLogoData[] = [];
   const supabase = createServiceClient();
 
+  console.log(`Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
+
   for (let i = 0; i < sponsorLogos.length; i++) {
     const sponsor = sponsorLogos[i];
     try {
       const ext = sponsor.fileName.split(".").pop()?.toLowerCase() || "png";
       const allowedExts = ["png", "jpg", "jpeg", "webp", "svg"];
       if (!allowedExts.includes(ext)) {
-        console.error("Invalid sponsor logo extension:", ext);
+        console.error(`[${i+1}/${sponsorLogos.length}] Invalid sponsor logo extension:`, ext);
         continue;
       }
 
-      const storagePath = `sponsor-logos/${eventId}-${i + 1}.${ext}`;
+      // Use timestamp to ensure unique paths
+      const timestamp = Date.now();
+      const storagePath = `sponsor-logos/${eventId}-${timestamp}-${i + 1}.${ext}`;
 
       // Convert base64 to buffer
       let base64Data: string;
@@ -143,30 +147,34 @@ async function uploadSponsorLogos(
 
       const buffer = Buffer.from(base64Data, "base64");
 
-      console.log("Uploading sponsor logo:", storagePath, "Size:", buffer.length, "bytes");
+      console.log(`[${i+1}/${sponsorLogos.length}] Uploading sponsor logo:`, storagePath, "Size:", buffer.length, "bytes");
 
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("event-logos")
         .upload(storagePath, buffer, {
-          contentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
-          upsert: true,
+          contentType: ext === "jpg" ? "image/jpeg" : ext === "svg" ? "image/svg+xml" : `image/${ext}`,
+          upsert: false, // Don't upsert, create new file each time
         });
 
       if (uploadError) {
-        console.error("Sponsor logo upload error:", uploadError);
+        console.error(`[${i+1}/${sponsorLogos.length}] Sponsor logo upload error:`, uploadError.message);
         continue;
       }
+
+      console.log(`[${i+1}/${sponsorLogos.length}] Upload successful:`, uploadData?.path);
 
       const { data: publicUrlData } = supabase.storage
         .from("event-logos")
         .getPublicUrl(storagePath);
 
       results.push({ name: sponsor.name, url: publicUrlData.publicUrl });
+      console.log(`[${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
     } catch (error) {
-      console.error("Exception uploading sponsor logo:", error);
+      console.error(`[${i+1}/${sponsorLogos.length}] Exception uploading sponsor logo:`, error);
     }
   }
 
+  console.log(`Sponsor logos upload complete. ${results.length}/${sponsorLogos.length} successful.`);
   return results;
 }
 
