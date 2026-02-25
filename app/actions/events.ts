@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { createServerClient } from "@/lib/supabase/server";
 import type { SportEvent, SportCategory } from "@/lib/types/event";
 
 export interface CreateEventData {
@@ -15,6 +16,8 @@ export interface CreateEventData {
   maxParticipants: number;
   totalKeys: number;
   visibility: "public" | "private";
+  logoBase64?: string; // Base64 encoded image from client
+  logoFileName?: string; // Original filename
 }
 
 export interface CreateEventResult {
@@ -41,6 +44,50 @@ async function getNextEventId(): Promise<string> {
   const nextNum = lastNum + 1;
 
   return `EVT-${String(nextNum).padStart(3, "0")}`;
+}
+
+/**
+ * Upload logo to Supabase Storage
+ */
+async function uploadEventLogo(
+  base64: string,
+  fileName: string,
+  eventId: string
+): Promise<string | null> {
+  try {
+    const supabase = await createServerClient();
+
+    // Extract file extension from original filename
+    const ext = fileName.split(".").pop() || "png";
+    const storagePath = `event-logos/${eventId}.${ext}`;
+
+    // Convert base64 to buffer
+    const base64Data = base64.split(",")[1]; // Remove data URL prefix
+    const buffer = Buffer.from(base64Data, "base64");
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from("event-logos")
+      .upload(storagePath, buffer, {
+        contentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
+        upsert: true,
+      });
+
+    if (error) {
+      console.error("Error uploading logo:", error);
+      return null;
+    }
+
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from("event-logos")
+      .getPublicUrl(storagePath);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error("Error in uploadEventLogo:", error);
+    return null;
+  }
 }
 
 /**
@@ -76,6 +123,12 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
     // Generate event ID
     const eventId = await getNextEventId();
 
+    // Upload logo if provided
+    let logoUrl: string | null = null;
+    if (data.logoBase64 && data.logoFileName) {
+      logoUrl = await uploadEventLogo(data.logoBase64, data.logoFileName, eventId);
+    }
+
     // Create event in database
     const event = await prisma.sportEvent.create({
       data: {
@@ -93,6 +146,7 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
         usedKeys: 0,
         totalKeys: data.totalKeys,
         visibility: data.visibility,
+        logoUrl,
         sports: data.sports as unknown as Record<string, never>,
       },
     });
@@ -120,6 +174,7 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
       usedKeys: event.usedKeys,
       totalKeys: event.totalKeys,
       visibility: event.visibility as "public" | "private",
+      logoUrl: event.logoUrl ?? undefined,
     };
 
     return { success: true, event: transformedEvent };
@@ -159,6 +214,7 @@ export async function getEvents(): Promise<SportEvent[]> {
       usedKeys: event.usedKeys,
       totalKeys: event.totalKeys,
       visibility: event.visibility as "public" | "private",
+      logoUrl: event.logoUrl ?? undefined,
     }));
   } catch (error) {
     console.error("Error fetching events:", error);
@@ -195,6 +251,7 @@ export async function getEventById(eventId: string): Promise<SportEvent | null> 
       usedKeys: event.usedKeys,
       totalKeys: event.totalKeys,
       visibility: event.visibility as "public" | "private",
+      logoUrl: event.logoUrl ?? undefined,
     };
   } catch (error) {
     console.error("Error fetching event:", error);

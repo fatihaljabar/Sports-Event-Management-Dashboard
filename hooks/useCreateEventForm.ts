@@ -128,6 +128,15 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     setIsSubmitting(true);
 
     try {
+      // Convert logo to base64 if exists
+      let logoBase64: string | undefined;
+      let logoFileName: string | undefined;
+
+      if (eventLogo && eventLogo.preview) {
+        logoBase64 = eventLogo.preview;
+        logoFileName = eventLogo.name;
+      }
+
       const result = await createEvent({
         name: eventName,
         type: eventType,
@@ -139,6 +148,8 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
         maxParticipants: parseInt(quota),
         totalKeys: calculateTotalKeys(parseInt(quota), selectedSports.length),
         visibility,
+        logoBase64,
+        logoFileName,
       });
 
       if (result.success && result.event) {

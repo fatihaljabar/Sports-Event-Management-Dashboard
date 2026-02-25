@@ -23,6 +23,7 @@ model SportEvent {
   usedKeys         Int      @default(0)
   totalKeys        Int
   visibility       String   @default("public")
+  logoUrl          String?
   sports           Json
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

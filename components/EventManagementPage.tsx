@@ -39,6 +39,7 @@ interface SportEvent {
   location: string;
   usedKeys: number;
   totalKeys: number;
+  logoUrl?: string; // URL to uploaded logo image
 }
 
 /* ─────────────────────────────────────────────
@@ -167,6 +168,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
         location: `${event.location.city}${event.location.venue ? `, ${event.location.venue}` : ""}`,
         usedKeys: event.usedKeys,
         totalKeys: event.totalKeys,
+        logoUrl: event.logoUrl, // Pass through uploaded logo URL
       };
     });
   }, [events]);
@@ -586,15 +588,27 @@ function EventRow({
         >
           {/* Logo */}
           <div
-            className="flex items-center justify-center rounded-xl flex-shrink-0 relative"
+            className="flex items-center justify-center rounded-xl flex-shrink-0 relative overflow-hidden"
             style={{
               width: "44px",
               height: "44px",
-              background: event.logo.bg,
+              background: event.logoUrl ? "transparent" : event.logo.bg,
               boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
             }}
           >
-            <span style={{ fontSize: "1.2rem" }}>{event.logo.emoji}</span>
+            {event.logoUrl ? (
+              <img
+                src={event.logoUrl}
+                alt={event.name}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: "1.2rem" }}>{event.logo.emoji}</span>
+            )}
           </div>
 
           <div className="min-w-0">
