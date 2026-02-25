@@ -137,3 +137,24 @@
     line-height: 1.5;
   }
 }
+
+/* Sonner Toast Override */
+[data-sonner-toast] {
+  background: #2563EB !important;
+  color: #FFFFFF !important;
+  border-color: #1D4ED8 !important;
+  border: 2px solid #1D4ED8 !important;
+}
+
+[data-sonner-toast] [data-title] {
+  color: #FFFFFF !important;
+}
+
+[data-sonner-toast] [data-description] {
+  color: #DBEAFE !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  background: #EF4444 !important;
+  border-color: #DC2626 !important;
+}
