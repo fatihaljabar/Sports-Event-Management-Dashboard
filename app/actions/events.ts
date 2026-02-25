@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import type { SportEvent, SportCategory } from "@/lib/types/event";
 
 export interface CreateEventData {
@@ -55,7 +55,7 @@ async function uploadEventLogo(
   eventId: string
 ): Promise<string | null> {
   try {
-    const supabase = await createServerClient();
+    const supabase = createServiceClient();
 
     // Extract file extension from original filename
     const ext = fileName.split(".").pop()?.toLowerCase() || "png";
