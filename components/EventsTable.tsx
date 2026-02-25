@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { MapPin, Search, Filter, Edit2, Eye, ChevronUp, ChevronDown } from "lucide-react";
+import { useEvents } from "@/lib/stores/event-store";
 
 type EventStatus = "Active" | "Upcoming" | "Scheduled" | "Completed";
 
@@ -15,86 +16,6 @@ interface SportEvent {
   athletes: number;
 }
 
-const events: SportEvent[] = [
-  {
-    id: "EVT-001",
-    name: "World Athletics Championship",
-    location: "Berlin",
-    country: "Germany",
-    sport: "Athletics",
-    sportEmoji: "🏃",
-    date: "Mar 15 – 22, 2026",
-    status: "Active",
-    athletes: 420,
-  },
-  {
-    id: "EVT-002",
-    name: "Swimming World Cup",
-    location: "Paris",
-    country: "France",
-    sport: "Swimming",
-    sportEmoji: "🏊",
-    date: "Mar 18 – 20, 2026",
-    status: "Active",
-    athletes: 312,
-  },
-  {
-    id: "EVT-003",
-    name: "International Boxing Classic",
-    location: "London",
-    country: "United Kingdom",
-    sport: "Boxing",
-    sportEmoji: "🥊",
-    date: "Apr 2 – 10, 2026",
-    status: "Upcoming",
-    athletes: 186,
-  },
-  {
-    id: "EVT-004",
-    name: "Basketball World Series",
-    location: "Chicago",
-    country: "United States",
-    sport: "Basketball",
-    sportEmoji: "🏀",
-    date: "Apr 15 – 25, 2026",
-    status: "Active",
-    athletes: 240,
-  },
-  {
-    id: "EVT-005",
-    name: "FIFA Youth Cup",
-    location: "Madrid",
-    country: "Spain",
-    sport: "Football",
-    sportEmoji: "⚽",
-    date: "May 1 – 15, 2026",
-    status: "Upcoming",
-    athletes: 528,
-  },
-  {
-    id: "EVT-006",
-    name: "Tennis Grand Slam Open",
-    location: "Melbourne",
-    country: "Australia",
-    sport: "Tennis",
-    sportEmoji: "🎾",
-    date: "May 20 – Jun 5, 2026",
-    status: "Scheduled",
-    athletes: 156,
-  },
-  {
-    id: "EVT-007",
-    name: "Olympic Trial Weightlifting",
-    location: "Tokyo",
-    country: "Japan",
-    sport: "Weightlifting",
-    sportEmoji: "🏋️",
-    date: "Jun 8 – 10, 2026",
-    status: "Scheduled",
-    athletes: 98,
-  },
-];
-
 const statusConfig: Record<EventStatus, { bg: string; color: string; dot: string }> = {
   Active: { bg: "#DCFCE7", color: "#15803D", dot: "#22C55E" },
   Upcoming: { bg: "#DBEAFE", color: "#1D4ED8", dot: "#3B82F6" },
@@ -105,14 +26,59 @@ const statusConfig: Record<EventStatus, { bg: string; color: string; dot: string
 const filterTabs = ["All", "Active", "Upcoming", "Scheduled", "Completed"];
 
 export function EventsTable() {
+  const { events } = useEvents();
   const [activeFilter, setActiveFilter] = useState("All");
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
+  // Convert events from database to the format expected by this component
+  const convertedEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return events.map((event) => {
+      const startDate = new Date(event.startDate);
+      const endDate = new Date(event.endDate);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+
+      // Format date range
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const dateStr = `${months[startDate.getMonth()]} ${startDate.getDate()} – ${endDate.getDate()} ${months[endDate.getMonth()]}, ${endDate.getFullYear()}`;
+
+      // Determine status based on dates
+      let status: EventStatus = "Scheduled";
+      if (today >= startDate && today <= endDate) {
+        status = "Active";
+      } else if (today < startDate) {
+        status = "Upcoming";
+      } else if (today > endDate) {
+        status = "Completed";
+      }
+
+      // Extract country from location
+      const parts = event.location.city.split(", ");
+      const country = parts.length > 1 ? parts[parts.length - 1].trim() : "Indonesia";
+      const city = parts[0];
+
+      return {
+        id: event.id,
+        name: event.name,
+        location: city,
+        country,
+        sport: event.sports[0]?.label || "Multi-sport",
+        sportEmoji: event.sports[0]?.emoji || "🏆",
+        date: dateStr,
+        status,
+        athletes: event.maxParticipants,
+      };
+    });
+  }, [events]);
+
   const filtered =
     activeFilter === "All"
-      ? events
-      : events.filter((e) => e.status === activeFilter);
+      ? convertedEvents
+      : convertedEvents.filter((e) => e.status === activeFilter);
 
   const handleSort = (col: string) => {
     if (sortCol === col) {

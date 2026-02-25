@@ -58,34 +58,54 @@ async function uploadEventLogo(
     const supabase = await createServerClient();
 
     // Extract file extension from original filename
-    const ext = fileName.split(".").pop() || "png";
+    const ext = fileName.split(".").pop()?.toLowerCase() || "png";
+
+    // Validate extension
+    const allowedExts = ["png", "jpg", "jpeg", "webp"];
+    if (!allowedExts.includes(ext)) {
+      console.error("Invalid file extension:", ext);
+      return null;
+    }
+
     const storagePath = `event-logos/${eventId}.${ext}`;
 
     // Convert base64 to buffer
-    const base64Data = base64.split(",")[1]; // Remove data URL prefix
+    let base64Data: string;
+    if (base64.includes(",")) {
+      base64Data = base64.split(",")[1]; // Remove data URL prefix
+    } else {
+      base64Data = base64;
+    }
+
     const buffer = Buffer.from(base64Data, "base64");
 
+    console.log("Attempting to upload to:", storagePath, "Size:", buffer.length, "bytes");
+
     // Upload to Supabase Storage
-    const { error } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("event-logos")
       .upload(storagePath, buffer, {
-        contentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
+        contentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
         upsert: true,
       });
 
-    if (error) {
-      console.error("Error uploading logo:", error);
+    if (uploadError) {
+      console.error("Supabase upload error:", uploadError);
       return null;
     }
+
+    console.log("Upload successful, getting public URL...");
 
     // Get public URL
     const { data: publicUrlData } = supabase.storage
       .from("event-logos")
       .getPublicUrl(storagePath);
 
+    console.log("Public URL:", publicUrlData.publicUrl);
+
     return publicUrlData.publicUrl;
   } catch (error) {
-    console.error("Error in uploadEventLogo:", error);
+    console.error("Exception in uploadEventLogo:", error);
     return null;
   }
 }
