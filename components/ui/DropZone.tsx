@@ -39,6 +39,14 @@ export function DropZone({
 
   const processFile = useCallback(
     async (file: File) => {
+      // Validate file extension
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      const allowedExts = ["png", "jpg", "jpeg", "webp"];
+      if (!allowedExts.includes(ext)) {
+        alert(`Invalid file type: ${ext}\n\nPlease use: PNG, JPG, JPEG, or WEBP\nSVG is not supported.`);
+        return;
+      }
+
       try {
         const base64 = await readFileAsBase64(file);
         onUpload({
@@ -108,7 +116,7 @@ export function DropZone({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/png,image/jpeg,image/webp"
         className="hidden"
         onChange={handleChange}
       />

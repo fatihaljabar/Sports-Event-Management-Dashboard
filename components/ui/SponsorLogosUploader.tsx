@@ -38,6 +38,14 @@ export function SponsorLogosUploader({
 
   const processFile = useCallback(
     async (file: File) => {
+      // Validate file extension
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      const allowedExts = ["png", "jpg", "jpeg", "webp"];
+      if (!allowedExts.includes(ext)) {
+        alert(`Invalid file type: ${ext}\n\nPlease use: PNG, JPG, JPEG, or WEBP\nSVG is not supported.`);
+        return;
+      }
+
       try {
         const base64 = await readFileAsBase64(file);
         onAdd({
@@ -101,7 +109,7 @@ export function SponsorLogosUploader({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/png,image/jpeg,image/webp"
           className="hidden"
           onChange={handleChange}
           disabled={logos.length >= MAX_LOGOS}
@@ -140,7 +148,7 @@ export function SponsorLogosUploader({
                 fontFamily: '"Inter", sans-serif',
               }}
             >
-              PNG, SVG · Max 2 MB
+              PNG, JPG, WEBP · Max 2 MB
             </p>
           </div>
         </div>

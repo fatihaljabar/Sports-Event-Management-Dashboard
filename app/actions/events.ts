@@ -61,14 +61,16 @@ async function uploadEventLogo(
     // Extract file extension from original filename
     const ext = fileName.split(".").pop()?.toLowerCase() || "png";
 
-    // Validate extension
+    // Validate extension (no SVG - not supported by Supabase Storage)
     const allowedExts = ["png", "jpg", "jpeg", "webp"];
     if (!allowedExts.includes(ext)) {
       console.error("Invalid file extension:", ext);
       return null;
     }
 
-    const storagePath = `event-logos/${eventId}.${ext}`;
+    // Use timestamp for uniqueness to avoid cache issues
+    const timestamp = Date.now();
+    const storagePath = `event-logos/${eventId}-${timestamp}.${ext}`;
 
     // Convert base64 to buffer
     let base64Data: string;
@@ -80,14 +82,14 @@ async function uploadEventLogo(
 
     const buffer = Buffer.from(base64Data, "base64");
 
-    console.log("Attempting to upload to:", storagePath, "Size:", buffer.length, "bytes");
+    console.log("Uploading event logo:", storagePath, "Size:", buffer.length, "bytes");
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from("event-logos")
       .upload(storagePath, buffer, {
         contentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
-        upsert: true,
+        upsert: false, // Create new file to avoid cache
       });
 
     if (uploadError) {
@@ -123,19 +125,20 @@ async function uploadSponsorLogos(
 
   console.log(`Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
 
+  const globalTimestamp = Date.now(); // Single timestamp for all uploads
+
   for (let i = 0; i < sponsorLogos.length; i++) {
     const sponsor = sponsorLogos[i];
     try {
       const ext = sponsor.fileName.split(".").pop()?.toLowerCase() || "png";
-      const allowedExts = ["png", "jpg", "jpeg", "webp", "svg"];
+      // No SVG support - Supabase Storage doesn't support it well
+      const allowedExts = ["png", "jpg", "jpeg", "webp"];
       if (!allowedExts.includes(ext)) {
-        console.error(`[${i+1}/${sponsorLogos.length}] Invalid sponsor logo extension:`, ext);
+        console.error(`[${i+1}/${sponsorLogos.length}] Invalid sponsor logo extension:`, ext, "(SVG not supported)");
         continue;
       }
 
-      // Use timestamp to ensure unique paths
-      const timestamp = Date.now();
-      const storagePath = `sponsor-logos/${eventId}-${timestamp}-${i + 1}.${ext}`;
+      const storagePath = `sponsor-logos/${eventId}-${globalTimestamp}-${i + 1}.${ext}`;
 
       // Convert base64 to buffer
       let base64Data: string;
@@ -152,8 +155,8 @@ async function uploadSponsorLogos(
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("event-logos")
         .upload(storagePath, buffer, {
-          contentType: ext === "jpg" ? "image/jpeg" : ext === "svg" ? "image/svg+xml" : `image/${ext}`,
-          upsert: false, // Don't upsert, create new file each time
+          contentType: ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`,
+          upsert: false,
         });
 
       if (uploadError) {
