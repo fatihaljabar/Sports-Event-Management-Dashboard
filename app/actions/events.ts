@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
-import type { SportEvent, SportCategory } from "@/lib/types/event";
+import type { SportEvent, SportCategory, SponsorLogoData } from "@/lib/types/event";
 
 export interface CreateEventData {
   name: string;
@@ -18,6 +18,7 @@ export interface CreateEventData {
   visibility: "public" | "private";
   logoBase64?: string; // Base64 encoded image from client
   logoFileName?: string; // Original filename
+  sponsorLogos?: Array<{ name: string; base64: string; fileName: string }>; // Sponsor logos
 }
 
 export interface CreateEventResult {
@@ -111,6 +112,65 @@ async function uploadEventLogo(
 }
 
 /**
+ * Upload sponsor logos to Supabase Storage
+ */
+async function uploadSponsorLogos(
+  sponsorLogos: Array<{ name: string; base64: string; fileName: string }>,
+  eventId: string
+): Promise<SponsorLogoData[]> {
+  const results: SponsorLogoData[] = [];
+  const supabase = createServiceClient();
+
+  for (let i = 0; i < sponsorLogos.length; i++) {
+    const sponsor = sponsorLogos[i];
+    try {
+      const ext = sponsor.fileName.split(".").pop()?.toLowerCase() || "png";
+      const allowedExts = ["png", "jpg", "jpeg", "webp", "svg"];
+      if (!allowedExts.includes(ext)) {
+        console.error("Invalid sponsor logo extension:", ext);
+        continue;
+      }
+
+      const storagePath = `sponsor-logos/${eventId}-${i + 1}.${ext}`;
+
+      // Convert base64 to buffer
+      let base64Data: string;
+      if (sponsor.base64.includes(",")) {
+        base64Data = sponsor.base64.split(",")[1];
+      } else {
+        base64Data = sponsor.base64;
+      }
+
+      const buffer = Buffer.from(base64Data, "base64");
+
+      console.log("Uploading sponsor logo:", storagePath, "Size:", buffer.length, "bytes");
+
+      const { error: uploadError } = await supabase.storage
+        .from("event-logos")
+        .upload(storagePath, buffer, {
+          contentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Sponsor logo upload error:", uploadError);
+        continue;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("event-logos")
+        .getPublicUrl(storagePath);
+
+      results.push({ name: sponsor.name, url: publicUrlData.publicUrl });
+    } catch (error) {
+      console.error("Exception uploading sponsor logo:", error);
+    }
+  }
+
+  return results;
+}
+
+/**
  * Create a new sport event
  */
 export async function createEvent(data: CreateEventData): Promise<CreateEventResult> {
@@ -151,6 +211,14 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
       console.log("Logo uploaded, URL:", logoUrl);
     }
 
+    // Upload sponsor logos if provided
+    let uploadedSponsors: SponsorLogoData[] = [];
+    if (data.sponsorLogos && data.sponsorLogos.length > 0) {
+      console.log("Uploading sponsor logos for event:", eventId);
+      uploadedSponsors = await uploadSponsorLogos(data.sponsorLogos, eventId);
+      console.log("Sponsor logos uploaded:", uploadedSponsors.length);
+    }
+
     // Create event in database
     const event = await prisma.sportEvent.create({
       data: {
@@ -169,6 +237,7 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
         totalKeys: data.totalKeys,
         visibility: data.visibility,
         logoUrl,
+        sponsorLogos: uploadedSponsors.length > 0 ? uploadedSponsors as unknown as Record<string, never> : null,
         sports: data.sports as unknown as Record<string, never>,
       },
     });
@@ -197,6 +266,7 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
       totalKeys: event.totalKeys,
       visibility: event.visibility as "public" | "private",
       logoUrl: event.logoUrl ?? undefined,
+      sponsorLogos: uploadedSponsors,
     };
 
     return { success: true, event: transformedEvent };
@@ -237,6 +307,7 @@ export async function getEvents(): Promise<SportEvent[]> {
       totalKeys: event.totalKeys,
       visibility: event.visibility as "public" | "private",
       logoUrl: event.logoUrl ?? undefined,
+      sponsorLogos: (event.sponsorLogos as unknown as SponsorLogoData[]) ?? undefined,
     }));
   } catch (error) {
     console.error("Error fetching events:", error);
@@ -274,6 +345,7 @@ export async function getEventById(eventId: string): Promise<SportEvent | null> 
       totalKeys: event.totalKeys,
       visibility: event.visibility as "public" | "private",
       logoUrl: event.logoUrl ?? undefined,
+      sponsorLogos: (event.sponsorLogos as unknown as SponsorLogoData[]) ?? undefined,
     };
   } catch (error) {
     console.error("Error fetching event:", error);

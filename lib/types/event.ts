@@ -38,6 +38,11 @@ export interface CreateEventData {
   sponsorLogos: SponsorLogo[];
 }
 
+export interface SponsorLogoData {
+  name: string;
+  url: string;
+}
+
 export interface SportEvent {
   id: string;
   name: string;
@@ -52,4 +57,5 @@ export interface SportEvent {
   totalKeys: number;
   visibility: "public" | "private";
   logoUrl?: string;
+  sponsorLogos?: SponsorLogoData[];
 }

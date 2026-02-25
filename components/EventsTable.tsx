@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { MapPin, Search, Filter, Edit2, Eye, ChevronUp, ChevronDown } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
+import type { SponsorLogoData } from "@/lib/types/event";
 
 type EventStatus = "Active" | "Upcoming" | "Scheduled" | "Completed";
 
@@ -14,6 +15,7 @@ interface SportEvent {
   date: string;
   status: EventStatus;
   athletes: number;
+  sponsorLogos?: SponsorLogoData[];
 }
 
 const statusConfig: Record<EventStatus, { bg: string; color: string; dot: string }> = {
@@ -71,6 +73,7 @@ export function EventsTable() {
         date: dateStr,
         status,
         athletes: event.maxParticipants,
+        sponsorLogos: event.sponsorLogos,
       };
     });
   }, [events]);
@@ -232,6 +235,7 @@ export function EventsTable() {
                 { key: "name", label: "Event Name" },
                 { key: "location", label: "Location" },
                 { key: "sport", label: "Sport" },
+                { key: "sponsors", label: "Sponsors" },
                 { key: "date", label: "Date" },
                 { key: "athletes", label: "Athletes" },
                 { key: "status", label: "Status" },
@@ -374,6 +378,56 @@ export function EventsTable() {
                         {event.sport}
                       </span>
                     </div>
+                  </td>
+
+                  {/* Sponsors */}
+                  <td style={{ padding: "1rem 1.25rem" }}>
+                    {!event.sponsorLogos || event.sponsorLogos.length === 0 ? (
+                      <span
+                        style={{
+                          color: "#CBD5E1",
+                          fontSize: "0.75rem",
+                          fontFamily: '"Inter", sans-serif',
+                        }}
+                      >
+                        —
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        {event.sponsorLogos.slice(0, 3).map((sponsor, idx) => (
+                          <img
+                            key={idx}
+                            src={sponsor.url}
+                            alt={sponsor.name}
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              borderRadius: "4px",
+                              objectFit: "contain",
+                              backgroundColor: "#F8FAFC",
+                              border: "1px solid #E2E8F0",
+                            }}
+                            title={sponsor.name}
+                          />
+                        ))}
+                        {event.sponsorLogos.length > 3 && (
+                          <span
+                            style={{
+                              color: "#64748B",
+                              fontSize: "0.65rem",
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontWeight: 500,
+                              backgroundColor: "#F1F5F9",
+                              borderRadius: "4px",
+                              padding: "2px 6px",
+                              border: "1px solid #E2E8F0",
+                            }}
+                          >
+                            +{event.sponsorLogos.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
 
                   {/* Date */}

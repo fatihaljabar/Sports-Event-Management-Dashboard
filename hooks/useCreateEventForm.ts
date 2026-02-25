@@ -137,6 +137,15 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
         logoFileName = eventLogo.name;
       }
 
+      // Convert sponsor logos to base64
+      const sponsorLogosData = sponsorLogos
+        .filter((logo) => logo.preview !== null)
+        .map((logo) => ({
+          name: logo.name,
+          base64: logo.preview as string,
+          fileName: logo.name,
+        }));
+
       const result = await createEvent({
         name: eventName,
         type: eventType,
@@ -150,6 +159,7 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
         visibility,
         logoBase64,
         logoFileName,
+        sponsorLogos: sponsorLogosData.length > 0 ? sponsorLogosData : undefined,
       });
 
       if (result.success && result.event) {
@@ -174,7 +184,7 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, quota, visibility, addEvent, onClose, validateForm]);
+  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, quota, visibility, eventLogo, sponsorLogos, addEvent, onClose, validateForm]);
 
   // Reset form
   const resetForm = useCallback(() => {
