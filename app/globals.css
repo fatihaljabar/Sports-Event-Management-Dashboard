@@ -154,7 +154,22 @@
   color: #DBEAFE !important;
 }
 
+/* Error toast - merah untuk error */
 [data-sonner-toast][data-type="error"] {
   background: #EF4444 !important;
   border-color: #DC2626 !important;
+}
+
+/* Delete toast - merah soft untuk delete action */
+[data-sonner-toast].delete-toast {
+  background: #FEE2E2 !important;
+  border-color: #FECACA !important;
+}
+
+[data-sonner-toast].delete-toast [data-title] {
+  color: #DC2626 !important;
+}
+
+[data-sonner-toast].delete-toast [data-description] {
+  color: #991B1B !important;
 }

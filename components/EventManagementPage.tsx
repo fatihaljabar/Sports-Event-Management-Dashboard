@@ -120,6 +120,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
         setDeleteConfirm(null);
         toast.success("Event deleted successfully", {
           description: `"${eventName}" has been removed.`,
+          className: "delete-toast",
         });
       } else {
         toast.error("Failed to delete event", {
