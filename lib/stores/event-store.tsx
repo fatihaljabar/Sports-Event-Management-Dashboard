@@ -10,6 +10,9 @@ interface EventContextType {
   addEvent: (event: SportEvent) => void;
   updateEvent: (id: string, event: Partial<SportEvent>) => void;
   deleteEvent: (id: string) => void;
+  archiveEvent: (id: string) => void;
+  unarchiveEvent: (id: string, newStatus: SportEvent["status"]) => void;
+  duplicateEvent: (event: SportEvent) => void;
   getEventById: (id: string) => SportEvent | undefined;
   refreshEvents: () => Promise<void>;
 }
@@ -55,6 +58,22 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     setEvents((prev) => prev.filter((event) => event.id !== id));
   }, []);
 
+  const archiveEvent = useCallback((id: string) => {
+    setEvents((prev) =>
+      prev.map((event) => (event.id === id ? { ...event, status: "archived" as const } : event))
+    );
+  }, []);
+
+  const unarchiveEvent = useCallback((id: string, newStatus: SportEvent["status"]) => {
+    setEvents((prev) =>
+      prev.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
+    );
+  }, []);
+
+  const duplicateEvent = useCallback((newEvent: SportEvent) => {
+    setEvents((prev) => [...prev, newEvent]);
+  }, []);
+
   const getEventById = useCallback(
     (id: string) => events.find((event) => event.id === id),
     [events]
@@ -62,7 +81,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <EventContext.Provider
-      value={{ events, isLoading, addEvent, updateEvent, deleteEvent, getEventById, refreshEvents }}
+      value={{ events, isLoading, addEvent, updateEvent, deleteEvent, archiveEvent, unarchiveEvent, duplicateEvent, getEventById, refreshEvents }}
     >
       {children}
     </EventContext.Provider>

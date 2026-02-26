@@ -9,7 +9,7 @@ import { MedalTally } from "@/components/MedalTally";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { CreateEventModal } from "@/components/CreateEventModal";
-import { EventManagementPage } from "@/components/EventManagementPage";
+import { EventManagementPage } from "@/components/event-management";
 import { KeyManagementPage } from "@/components/KeyManagementPage";
 import { ParticipantsPage } from "@/components/ParticipantsPage";
 import { CompetitionResultsPage } from "@/components/CompetitionResultsPage";

@@ -138,24 +138,44 @@
   }
 }
 
-/* Sonner Toast Override */
-/* Default/Success toast - hijau soft */
+/* =============================================
+   SONNER TOAST STYLES
+   Cara kerja: Class kustom harus diletakkan
+   setelah default styles agar override
+   ============================================= */
+
+/* Default toast - putih/netral */
 [data-sonner-toast] {
-  background: #DCFCE7 !important;
-  color: #15803D !important;
-  border-color: #86EFAC !important;
-  border: 2px solid #86EFAC !important;
+  background: #FFFFFF !important;
+  color: #1E293B !important;
+  border-color: #E2E8F0 !important;
+  border: 1px solid #E2E8F0 !important;
 }
 
 [data-sonner-toast] [data-title] {
-  color: #15803D !important;
+  color: #1E293B !important;
 }
 
 [data-sonner-toast] [data-description] {
+  color: #64748B !important;
+}
+
+/* Success toast - hijau soft */
+[data-sonner-toast][data-type="success"] {
+  background: #DCFCE7 !important;
+  border-color: #86EFAC !important;
+  color: #15803D !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-title] {
+  color: #15803D !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-description] {
   color: #166534 !important;
 }
 
-/* Error toast - merah untuk error */
+/* Error toast - merah solid */
 [data-sonner-toast][data-type="error"] {
   background: #EF4444 !important;
   border-color: #DC2626 !important;
@@ -170,10 +190,16 @@
   color: #FEE2E2 !important;
 }
 
-/* Delete toast - merah soft untuk delete action */
+/* =============================================
+   CUSTOM TOAST CLASSES
+   Harus diletakkan paling terakhir
+   ============================================= */
+
+/* Delete toast - merah soft */
 [data-sonner-toast].delete-toast {
   background: #FEE2E2 !important;
   border-color: #FECACA !important;
+  color: #DC2626 !important;
 }
 
 [data-sonner-toast].delete-toast [data-title] {
@@ -182,4 +208,131 @@
 
 [data-sonner-toast].delete-toast [data-description] {
   color: #991B1B !important;
+}
+
+[data-sonner-toast].delete-toast svg {
+  color: #DC2626 !important;
+  stroke: #DC2626 !important;
+}
+
+[data-sonner-toast].delete-toast svg * {
+  stroke: #DC2626 !important;
+  fill: #DC2626 !important;
+}
+
+/* Archive toast - amber */
+[data-sonner-toast].archive-toast {
+  background: #FEF3C7 !important;
+  border-color: #FDE68A !important;
+  color: #B45309 !important;
+}
+
+[data-sonner-toast].archive-toast [data-title] {
+  color: #B45309 !important;
+}
+
+[data-sonner-toast].archive-toast [data-description] {
+  color: #92400E !important;
+}
+
+[data-sonner-toast].archive-toast svg {
+  color: #D97706 !important;
+  stroke: #D97706 !important;
+}
+
+[data-sonner-toast].archive-toast svg * {
+  stroke: #D97706 !important;
+  fill: #D97706 !important;
+}
+
+/* Unarchive toast - blue */
+[data-sonner-toast].unarchive-toast {
+  background: #DBEAFE !important;
+  border-color: #BFDBFE !important;
+  color: #1D4ED8 !important;
+}
+
+[data-sonner-toast].unarchive-toast [data-title] {
+  color: #1D4ED8 !important;
+}
+
+[data-sonner-toast].unarchive-toast [data-description] {
+  color: #1E40AF !important;
+}
+
+[data-sonner-toast].unarchive-toast svg {
+  color: #1D4ED8 !important;
+  stroke: #1D4ED8 !important;
+}
+
+[data-sonner-toast].unarchive-toast svg * {
+  stroke: #1D4ED8 !important;
+  fill: #1D4ED8 !important;
+}
+
+/* =============================================
+   EVENT MANAGEMENT CSS VARIABLES
+   ============================================= */
+:root {
+  /* Primary Blue */
+  --em-primary: #2563EB;
+  --em-primary-hover: #1D4ED8;
+  --em-primary-dark: #1E40AF;
+  --em-primary-soft: #EFF6FF;
+  --em-primary-border: #BFDBFE;
+
+  /* Backgrounds */
+  --em-bg-white: #FFFFFF;
+  --em-bg-soft: #F8FAFC;
+  --em-bg-blue: #DBEAFE;
+  --em-bg-amber: #FEF3C7;
+  --em-bg-red-soft: #FEE2E2;
+  --em-bg-green: #DCFCE7;
+
+  /* Text Colors */
+  --em-text-primary: #0F172A;
+  --em-text-secondary: #374151;
+  --em-text-muted: #64748B;
+  --em-text-muted-light: #94A3B8;
+  --em-text-light: #CBD5E1;
+  --em-text-blue: #1D4ED8;
+  --em-text-blue-light: #2563EB;
+  --em-text-red: #DC2626;
+  --em-text-amber: #B45309;
+
+  /* Borders */
+  --em-border-default: #E2E8F0;
+  --em-border-light: #F1F5F9;
+  --em-border-blue: #BFDBFE;
+  --em-border-red: #FECACA;
+  --em-border-amber: #FDE68A;
+
+  /* Status Colors */
+  --em-status-active-bg: #DCFCE7;
+  --em-status-active-color: #15803D;
+  --em-status-active-dot: #22C55E;
+  --em-status-upcoming-bg: #DBEAFE;
+  --em-status-upcoming-color: #1D4ED8;
+  --em-status-upcoming-dot: #3B82F6;
+  --em-status-completed-bg: #F3F4F6;
+  --em-status-completed-color: #374151;
+  --em-status-completed-dot: #9CA3AF;
+  --em-status-archived-bg: #F1F5F9;
+  --em-status-archived-color: #64748B;
+  --em-status-archived-dot: #94A3B8;
+}
+
+/* =============================================
+   EVENT MANAGEMENT UTILITY CLASSES
+   ============================================= */
+.font-inter {
+  font-family: "Inter", sans-serif;
+}
+
+.font-mono {
+  font-family: "JetBrains Mono", monospace;
+}
+
+.font-condensed {
+  font-family: "Barlow Condensed", sans-serif;
 }

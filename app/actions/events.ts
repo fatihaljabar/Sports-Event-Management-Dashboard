@@ -3,7 +3,128 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
 import type { SportEvent, SportCategory, SponsorLogoData } from "@/lib/types/event";
+import { Prisma } from "@prisma/client";
+
+// ═══════════════════════════════════════════════════════════════
+// SECURITY CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_STRING_LENGTH = 500;
+const MAX_EVENT_NAME_LENGTH = 200;
+const MAX_LOCATION_LENGTH = 200;
+const MAX_TIMEZONE_LENGTH = 100;
+const MAX_SPONSOR_NAME_LENGTH = 100;
+
+// Allowed file extensions for image upload
+const ALLOWED_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp"] as const;
+type AllowedImageExt = typeof ALLOWED_IMAGE_EXTENSIONS[number];
+
+// Generic error messages for production (don't leak implementation details)
+const GENERIC_ERROR_MESSAGES = {
+  CREATE_FAILED: "Failed to create event. Please try again.",
+  UPDATE_FAILED: "Failed to update event. Please try again.",
+  DELETE_FAILED: "Failed to delete event. Please try again.",
+  ARCHIVE_FAILED: "Failed to archive event. Please try again.",
+  UNARCHIVE_FAILED: "Failed to restore event. Please try again.",
+  DUPLICATE_FAILED: "Failed to duplicate event. Please try again.",
+  EXPORT_FAILED: "Failed to export event data. Please try again.",
+  UPLOAD_FAILED: "Failed to upload image. File must be under 5MB and in PNG, JPG, or WEBP format.",
+  INVALID_INPUT: "Invalid input data. Please check your entries.",
+} as const;
+
+// ═══════════════════════════════════════════════════════════════
+// SECURITY UTILITIES
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Basic CSRF protection - verify request originates from same site
+ * TODO: Enhance with proper CSRF tokens when authentication is implemented
+ */
+async function verifyRequestOrigin(): Promise<boolean> {
+  try {
+    const headersList = await headers();
+    const referer = headersList.get("referer");
+    const origin = headersList.get("origin");
+    const host = headersList.get("host");
+
+    // Allow requests with same-origin referer
+    if (referer && host) {
+      try {
+        const refererUrl = new URL(referer);
+        return refererUrl.host === host;
+      } catch {
+        return false;
+      }
+    }
+
+    // Allow requests with same-origin header
+    if (origin && host) {
+      try {
+        const originUrl = new URL(origin);
+        return originUrl.host === host;
+      } catch {
+        return false;
+      }
+    }
+
+    return true; // Allow for development
+  } catch {
+    return true; // Fail open for development
+  }
+}
+
+/**
+ * Sanitize string input - trim and limit length
+ */
+function sanitizeString(input: string, maxLength: number): string {
+  const trimmed = input.trim();
+  if (trimmed.length > maxLength) {
+    return trimmed.substring(0, maxLength);
+  }
+  return trimmed;
+}
+
+/**
+ * Validate and extract file extension from filename
+ * Prevents double extension attacks (e.g., file.png.jpg)
+ */
+function validateFileExtension(fileName: string): AllowedImageExt | null {
+  // Remove any query parameters or hashes
+  const cleanName = fileName.split(/[?#]/)[0];
+
+  // Get the last extension
+  const parts = cleanName.split(".");
+  if (parts.length < 2) return null;
+
+  const ext = parts[parts.length - 1].toLowerCase();
+
+  // Verify it's in our allowed list
+  if (ALLOWED_IMAGE_EXTENSIONS.includes(ext as AllowedImageExt)) {
+    return ext as AllowedImageExt;
+  }
+
+  return null;
+}
+
+/**
+ * Validate file size from base64 string
+ */
+function validateBase64Size(base64: string, maxSize: number): boolean {
+  // Remove data URL prefix if present
+  let base64Data: string;
+  if (base64.includes(",")) {
+    base64Data = base64.split(",")[1];
+  } else {
+    base64Data = base64;
+  }
+
+  // Calculate decoded size (base64 is ~33% larger than original)
+  const decodedSize = Math.floor((base64Data.length * 3) / 4);
+  return decodedSize <= maxSize;
+}
 
 export interface CreateEventData {
   name: string;
@@ -48,7 +169,7 @@ async function getNextEventId(): Promise<string> {
 }
 
 /**
- * Upload logo to Supabase Storage
+ * Upload logo to Supabase Storage with security validation
  */
 async function uploadEventLogo(
   base64: string,
@@ -58,19 +179,24 @@ async function uploadEventLogo(
   try {
     const supabase = createServiceClient();
 
-    // Extract file extension from original filename
-    const ext = fileName.split(".").pop()?.toLowerCase() || "png";
+    // Validate file extension with improved security
+    const ext = validateFileExtension(fileName);
+    if (!ext) {
+      console.error("Invalid file extension:", fileName);
+      return null;
+    }
 
-    // Validate extension (no SVG - not supported by Supabase Storage)
-    const allowedExts = ["png", "jpg", "jpeg", "webp"];
-    if (!allowedExts.includes(ext)) {
-      console.error("Invalid file extension:", ext);
+    // Validate file size before processing
+    if (!validateBase64Size(base64, MAX_FILE_SIZE)) {
+      console.error("File size exceeds limit:", fileName);
       return null;
     }
 
     // Use timestamp for uniqueness to avoid cache issues
     const timestamp = Date.now();
-    const storagePath = `event-logos/${eventId}-${timestamp}.${ext}`;
+    // Sanitize eventId in storage path to prevent path traversal
+    const sanitizedEventId = eventId.replace(/[^a-zA-Z0-9-]/g, "");
+    const storagePath = `event-logos/${sanitizedEventId}-${timestamp}.${ext}`;
 
     // Convert base64 to buffer
     let base64Data: string;
@@ -81,6 +207,12 @@ async function uploadEventLogo(
     }
 
     const buffer = Buffer.from(base64Data, "base64");
+
+    // Double-check buffer size
+    if (buffer.length > MAX_FILE_SIZE) {
+      console.error("Buffer size exceeds limit:", buffer.length);
+      return null;
+    }
 
     console.log("Uploading event logo:", storagePath, "Size:", buffer.length, "bytes");
 
@@ -114,7 +246,7 @@ async function uploadEventLogo(
 }
 
 /**
- * Upload sponsor logos to Supabase Storage
+ * Upload sponsor logos to Supabase Storage with security validation
  */
 async function uploadSponsorLogos(
   sponsorLogos: Array<{ name: string; base64: string; fileName: string }>,
@@ -126,19 +258,28 @@ async function uploadSponsorLogos(
   console.log(`Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
 
   const globalTimestamp = Date.now(); // Single timestamp for all uploads
+  const sanitizedEventId = eventId.replace(/[^a-zA-Z0-9-]/g, "");
 
   for (let i = 0; i < sponsorLogos.length; i++) {
     const sponsor = sponsorLogos[i];
     try {
-      const ext = sponsor.fileName.split(".").pop()?.toLowerCase() || "png";
-      // No SVG support - Supabase Storage doesn't support it well
-      const allowedExts = ["png", "jpg", "jpeg", "webp"];
-      if (!allowedExts.includes(ext)) {
-        console.error(`[${i+1}/${sponsorLogos.length}] Invalid sponsor logo extension:`, ext, "(SVG not supported)");
+      // Sanitize sponsor name
+      const sanitizedName = sanitizeString(sponsor.name, MAX_SPONSOR_NAME_LENGTH);
+
+      // Validate file extension with improved security
+      const ext = validateFileExtension(sponsor.fileName);
+      if (!ext) {
+        console.error(`[${i+1}/${sponsorLogos.length}] Invalid sponsor logo extension:`, sponsor.fileName);
         continue;
       }
 
-      const storagePath = `sponsor-logos/${eventId}-${globalTimestamp}-${i + 1}.${ext}`;
+      // Validate file size
+      if (!validateBase64Size(sponsor.base64, MAX_FILE_SIZE)) {
+        console.error(`[${i+1}/${sponsorLogos.length}] Sponsor logo exceeds size limit`);
+        continue;
+      }
+
+      const storagePath = `sponsor-logos/${sanitizedEventId}-${globalTimestamp}-${i + 1}.${ext}`;
 
       // Convert base64 to buffer
       let base64Data: string;
@@ -149,6 +290,12 @@ async function uploadSponsorLogos(
       }
 
       const buffer = Buffer.from(base64Data, "base64");
+
+      // Double-check buffer size
+      if (buffer.length > MAX_FILE_SIZE) {
+        console.error(`[${i+1}/${sponsorLogos.length}] Buffer size exceeds limit:`, buffer.length);
+        continue;
+      }
 
       console.log(`[${i+1}/${sponsorLogos.length}] Uploading sponsor logo:`, storagePath, "Size:", buffer.length, "bytes");
 
@@ -170,7 +317,7 @@ async function uploadSponsorLogos(
         .from("event-logos")
         .getPublicUrl(storagePath);
 
-      results.push({ name: sponsor.name, url: publicUrlData.publicUrl });
+      results.push({ name: sanitizedName, url: publicUrlData.publicUrl });
       console.log(`[${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
     } catch (error) {
       console.error(`[${i+1}/${sponsorLogos.length}] Exception uploading sponsor logo:`, error);
@@ -182,18 +329,27 @@ async function uploadSponsorLogos(
 }
 
 /**
- * Create a new sport event
+ * Create a new sport event with security validation
  */
 export async function createEvent(data: CreateEventData): Promise<CreateEventResult> {
+  // Verify request origin (basic CSRF protection)
+  if (!(await verifyRequestOrigin())) {
+    return { success: false, error: GENERIC_ERROR_MESSAGES.CREATE_FAILED };
+  }
+
   try {
-    // Validate required fields
-    if (!data.name.trim()) {
+    // Sanitize and validate required fields
+    const sanitizedName = sanitizeString(data.name, MAX_EVENT_NAME_LENGTH);
+    if (!sanitizedName) {
       return { success: false, error: "Event name is required" };
     }
 
-    if (!data.locationCity.trim()) {
+    const sanitizedLocationCity = sanitizeString(data.locationCity, MAX_LOCATION_LENGTH);
+    if (!sanitizedLocationCity) {
       return { success: false, error: "Location is required" };
     }
+
+    const sanitizedTimezone = sanitizeString(data.locationTimezone, MAX_TIMEZONE_LENGTH);
 
     if (!data.startDate) {
       return { success: false, error: "Start date is required" };
@@ -203,12 +359,34 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
       return { success: false, error: "End date is required" };
     }
 
-    if (data.maxParticipants < 1) {
-      return { success: false, error: "Max participants must be at least 1" };
+    // Date range validation
+    const startDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
+    if (startDate > endDate) {
+      return { success: false, error: "End date must be after start date" };
     }
 
-    if (data.sports.length === 0) {
-      return { success: false, error: "At least 1 sport is required" };
+    if (data.maxParticipants < 1 || data.maxParticipants > 1000000) {
+      return { success: false, error: "Max participants must be between 1 and 1,000,000" };
+    }
+
+    if (data.sports.length === 0 || data.sports.length > 50) {
+      return { success: false, error: "At least 1 sport is required (max 50)" };
+    }
+
+    // Validate file uploads before proceeding
+    if (data.logoBase64 && data.logoFileName) {
+      const ext = validateFileExtension(data.logoFileName);
+      if (!ext) {
+        return { success: false, error: GENERIC_ERROR_MESSAGES.UPLOAD_FAILED };
+      }
+      if (!validateBase64Size(data.logoBase64, MAX_FILE_SIZE)) {
+        return { success: false, error: GENERIC_ERROR_MESSAGES.UPLOAD_FAILED };
+      }
+    }
+
+    if (data.sponsorLogos && data.sponsorLogos.length > 5) {
+      return { success: false, error: "Maximum 5 sponsor logos allowed" };
     }
 
     // Generate event ID
@@ -234,12 +412,12 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
     const event = await prisma.sportEvent.create({
       data: {
         eventId,
-        name: data.name,
+        name: sanitizedName,
         type: data.type,
         status: "upcoming",
-        locationCity: data.locationCity,
+        locationCity: sanitizedLocationCity,
         locationVenue: null,
-        locationTimezone: data.locationTimezone,
+        locationTimezone: sanitizedTimezone,
         coordinates: null as unknown as undefined,
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
@@ -248,8 +426,8 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
         totalKeys: data.totalKeys,
         visibility: data.visibility,
         logoUrl,
-        sponsorLogos: uploadedSponsors.length > 0 ? uploadedSponsors as unknown as Record<string, never> : null,
-        sports: data.sports as unknown as Record<string, never>,
+        sponsorLogos: uploadedSponsors.length > 0 ? (uploadedSponsors as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+        sports: data.sports as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -285,7 +463,7 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
     console.error("Error creating event:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to create event",
+      error: GENERIC_ERROR_MESSAGES.CREATE_FAILED,
     };
   }
 }
@@ -368,7 +546,17 @@ export async function getEventById(eventId: string): Promise<SportEvent | null> 
  * Delete an event and its associated images from storage
  */
 export async function deleteEvent(eventId: string): Promise<{ success: boolean; error?: string }> {
+  // Verify request origin (basic CSRF protection)
+  if (!(await verifyRequestOrigin())) {
+    return { success: false, error: GENERIC_ERROR_MESSAGES.DELETE_FAILED };
+  }
+
   try {
+    // Validate eventId format to prevent injection
+    if (!eventId || !/^EVT-\d+$/.test(eventId)) {
+      return { success: false, error: GENERIC_ERROR_MESSAGES.DELETE_FAILED };
+    }
+
     const supabase = createServiceClient();
 
     // First, fetch the event to get logo URLs
@@ -392,7 +580,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
         // Path format: /storage/v1/object/public/bucket-name/path/to/file
         const bucketIndex = pathParts.indexOf("event-logos");
         if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
-          const storagePath = pathParts.slice(bucketIndex).join("/");
+          const storagePath = pathParts.slice(bucketIndex + 1).join("/");
           const { error: deleteError } = await supabase.storage
             .from("event-logos")
             .remove([storagePath]);
@@ -416,7 +604,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
           const pathParts = url.pathname.split("/");
           const bucketIndex = pathParts.indexOf("event-logos");
           if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
-            const storagePath = pathParts.slice(bucketIndex).join("/");
+            const storagePath = pathParts.slice(bucketIndex + 1).join("/");
             const { error: deleteError } = await supabase.storage
               .from("event-logos")
               .remove([storagePath]);
@@ -445,7 +633,472 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     console.error("Error deleting event:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to delete event",
+      error: GENERIC_ERROR_MESSAGES.DELETE_FAILED,
+    };
+  }
+}
+
+/**
+ * Update an existing sport event
+ */
+export interface UpdateEventData {
+  eventId: string;
+  name: string;
+  type: "single" | "multi";
+  sports: SportCategory[];
+  locationCity: string;
+  locationTimezone: string;
+  startDate: string;
+  endDate: string;
+  maxParticipants: number;
+  totalKeys: number;
+  visibility: "public" | "private";
+  logoBase64?: string;
+  logoFileName?: string;
+  sponsorLogos?: Array<{ name: string; base64: string; fileName: string }>;
+  keepExistingLogo?: boolean;
+  keepExistingSponsors?: boolean;
+}
+
+export interface UpdateEventResult {
+  success: boolean;
+  event?: SportEvent;
+  error?: string;
+}
+
+export async function updateEvent(data: UpdateEventData): Promise<UpdateEventResult> {
+  // Verify request origin (basic CSRF protection)
+  if (!(await verifyRequestOrigin())) {
+    return { success: false, error: GENERIC_ERROR_MESSAGES.UPDATE_FAILED };
+  }
+
+  try {
+    // Sanitize and validate required fields
+    const sanitizedName = sanitizeString(data.name, MAX_EVENT_NAME_LENGTH);
+    if (!sanitizedName) {
+      return { success: false, error: "Event name is required" };
+    }
+
+    const sanitizedLocationCity = sanitizeString(data.locationCity, MAX_LOCATION_LENGTH);
+    if (!sanitizedLocationCity) {
+      return { success: false, error: "Location is required" };
+    }
+
+    const sanitizedTimezone = sanitizeString(data.locationTimezone, MAX_TIMEZONE_LENGTH);
+
+    if (!data.startDate) {
+      return { success: false, error: "Start date is required" };
+    }
+
+    if (!data.endDate) {
+      return { success: false, error: "End date is required" };
+    }
+
+    // Date range validation
+    const startDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
+    if (startDate > endDate) {
+      return { success: false, error: "End date must be after start date" };
+    }
+
+    if (data.maxParticipants < 1 || data.maxParticipants > 1000000) {
+      return { success: false, error: "Max participants must be between 1 and 1,000,000" };
+    }
+
+    if (data.sports.length === 0 || data.sports.length > 50) {
+      return { success: false, error: "At least 1 sport is required (max 50)" };
+    }
+
+    // Validate file uploads before proceeding
+    if (data.logoBase64 && data.logoFileName && !data.keepExistingLogo) {
+      const ext = validateFileExtension(data.logoFileName);
+      if (!ext) {
+        return { success: false, error: GENERIC_ERROR_MESSAGES.UPLOAD_FAILED };
+      }
+      if (!validateBase64Size(data.logoBase64, MAX_FILE_SIZE)) {
+        return { success: false, error: GENERIC_ERROR_MESSAGES.UPLOAD_FAILED };
+      }
+    }
+
+    if (data.sponsorLogos && data.sponsorLogos.length > 5) {
+      return { success: false, error: "Maximum 5 sponsor logos allowed" };
+    }
+
+    // Fetch existing event to get current data
+    const existingEvent = await prisma.sportEvent.findUnique({
+      where: { eventId: data.eventId },
+    });
+
+    if (!existingEvent) {
+      return { success: false, error: "Event not found" };
+    }
+
+    // Upload new logo if provided
+    let logoUrl: string | null = existingEvent.logoUrl;
+    if (data.logoBase64 && data.logoFileName && !data.keepExistingLogo) {
+      console.log("Uploading new logo for event:", data.eventId);
+      logoUrl = await uploadEventLogo(data.logoBase64, data.logoFileName, data.eventId);
+      console.log("New logo uploaded, URL:", logoUrl);
+    }
+
+    // Handle sponsor logos
+    let uploadedSponsors: SponsorLogoData[] = [];
+    const existingSponsors = existingEvent.sponsorLogos as unknown as SponsorLogoData[] | null;
+
+    if (data.sponsorLogos && data.sponsorLogos.length > 0 && !data.keepExistingSponsors) {
+      // Delete old sponsor logos from storage
+      if (existingSponsors && existingSponsors.length > 0) {
+        const supabase = createServiceClient();
+        for (const sponsor of existingSponsors) {
+          try {
+            const url = new URL(sponsor.url);
+            const pathParts = url.pathname.split("/");
+            const bucketIndex = pathParts.indexOf("event-logos");
+            if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
+              const storagePath = pathParts.slice(bucketIndex + 1).join("/");
+              await supabase.storage.from("event-logos").remove([storagePath]);
+            }
+          } catch (error) {
+            console.error("Error deleting old sponsor logo:", error);
+          }
+        }
+      }
+
+      // Upload new sponsor logos
+      console.log("Uploading new sponsor logos for event:", data.eventId);
+      uploadedSponsors = await uploadSponsorLogos(data.sponsorLogos, data.eventId);
+      console.log("New sponsor logos uploaded:", uploadedSponsors.length);
+    } else if (data.keepExistingSponsors && existingSponsors) {
+      uploadedSponsors = existingSponsors;
+    }
+
+    // Update event in database
+    const event = await prisma.sportEvent.update({
+      where: { eventId: data.eventId },
+      data: {
+        name: sanitizedName,
+        type: data.type,
+        locationCity: sanitizedLocationCity,
+        locationTimezone: sanitizedTimezone,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
+        maxParticipants: data.maxParticipants,
+        totalKeys: data.totalKeys,
+        visibility: data.visibility,
+        logoUrl,
+        sponsorLogos: uploadedSponsors.length > 0 ? (uploadedSponsors as unknown as Prisma.InputJsonValue) : (existingEvent.sponsorLogos || Prisma.JsonNull),
+        sports: data.sports as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    // Revalidate cache
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+
+    // Transform to SportEvent type
+    const transformedEvent: SportEvent = {
+      id: event.eventId,
+      name: event.name,
+      type: event.type as "single" | "multi",
+      status: event.status as SportEvent["status"],
+      sports: event.sports as unknown as SportEvent["sports"],
+      location: {
+        city: event.locationCity,
+        venue: event.locationVenue ?? "",
+        coordinates: null,
+        timezone: event.locationTimezone,
+      },
+      startDate: event.startDate.toISOString(),
+      endDate: event.endDate.toISOString(),
+      maxParticipants: event.maxParticipants,
+      usedKeys: event.usedKeys,
+      totalKeys: event.totalKeys,
+      visibility: event.visibility as "public" | "private",
+      logoUrl: event.logoUrl ?? undefined,
+      sponsorLogos: uploadedSponsors.length > 0 ? uploadedSponsors : (existingSponsors ?? undefined),
+    };
+
+    return { success: true, event: transformedEvent };
+  } catch (error) {
+    console.error("Error updating event:", error);
+    return {
+      success: false,
+      error: GENERIC_ERROR_MESSAGES.UPDATE_FAILED,
+    };
+  }
+}
+
+/**
+ * Archive an event (change status to archived)
+ */
+export interface ArchiveEventResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function archiveEvent(eventId: string): Promise<ArchiveEventResult> {
+  // Verify request origin (basic CSRF protection)
+  if (!(await verifyRequestOrigin())) {
+    return { success: false, error: GENERIC_ERROR_MESSAGES.ARCHIVE_FAILED };
+  }
+
+  try {
+    // Validate eventId format
+    if (!eventId || !/^EVT-\d+$/.test(eventId)) {
+      return { success: false, error: GENERIC_ERROR_MESSAGES.ARCHIVE_FAILED };
+    }
+
+    const event = await prisma.sportEvent.findUnique({
+      where: { eventId },
+    });
+
+    if (!event) {
+      return { success: false, error: "Event not found" };
+    }
+
+    await prisma.sportEvent.update({
+      where: { eventId },
+      data: { status: "archived" },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error archiving event:", error);
+    return {
+      success: false,
+      error: GENERIC_ERROR_MESSAGES.ARCHIVE_FAILED,
+    };
+  }
+}
+
+/**
+ * Unarchive an event (restore from archived status)
+ */
+export interface UnarchiveEventResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function unarchiveEvent(eventId: string): Promise<UnarchiveEventResult> {
+  // Verify request origin (basic CSRF protection)
+  if (!(await verifyRequestOrigin())) {
+    return { success: false, error: GENERIC_ERROR_MESSAGES.UNARCHIVE_FAILED };
+  }
+
+  try {
+    // Validate eventId format
+    if (!eventId || !/^EVT-\d+$/.test(eventId)) {
+      return { success: false, error: GENERIC_ERROR_MESSAGES.UNARCHIVE_FAILED };
+    }
+
+    const event = await prisma.sportEvent.findUnique({
+      where: { eventId },
+    });
+
+    if (!event) {
+      return { success: false, error: "Event not found" };
+    }
+
+    // Calculate appropriate status based on dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(event.endDate);
+    endDate.setHours(0, 0, 0, 0);
+    const startDate = new Date(event.startDate);
+    startDate.setHours(0, 0, 0, 0);
+
+    let newStatus: "upcoming" | "active" | "completed" = "upcoming";
+    if (today > endDate) {
+      newStatus = "completed";
+    } else if (today >= startDate && today <= endDate) {
+      newStatus = "active";
+    }
+
+    await prisma.sportEvent.update({
+      where: { eventId },
+      data: { status: newStatus },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error unarchiving event:", error);
+    return {
+      success: false,
+      error: GENERIC_ERROR_MESSAGES.UNARCHIVE_FAILED,
+    };
+  }
+}
+
+/**
+ * Duplicate an event (create a copy with new ID)
+ */
+export interface DuplicateEventResult {
+  success: boolean;
+  event?: SportEvent;
+  error?: string;
+}
+
+export async function duplicateEvent(eventId: string): Promise<DuplicateEventResult> {
+  // Verify request origin (basic CSRF protection)
+  if (!(await verifyRequestOrigin())) {
+    return { success: false, error: GENERIC_ERROR_MESSAGES.DUPLICATE_FAILED };
+  }
+
+  try {
+    // Validate eventId format
+    if (!eventId || !/^EVT-\d+$/.test(eventId)) {
+      return { success: false, error: GENERIC_ERROR_MESSAGES.DUPLICATE_FAILED };
+    }
+
+    const existingEvent = await prisma.sportEvent.findUnique({
+      where: { eventId },
+    });
+
+    if (!existingEvent) {
+      return { success: false, error: "Event not found" };
+    }
+
+    // Generate new event ID
+    const newEventId = await getNextEventId();
+
+    // Sanitize the name before duplication
+    const sanitizedName = sanitizeString(
+      `${existingEvent.name} (Copy)`,
+      MAX_EVENT_NAME_LENGTH
+    );
+
+    // Create duplicate event
+    const newEvent = await prisma.sportEvent.create({
+      data: {
+        eventId: newEventId,
+        name: sanitizedName,
+        type: existingEvent.type,
+        status: "upcoming",
+        locationCity: existingEvent.locationCity,
+        locationVenue: existingEvent.locationVenue,
+        locationTimezone: existingEvent.locationTimezone,
+        coordinates: existingEvent.coordinates as unknown as undefined,
+        startDate: existingEvent.startDate,
+        endDate: existingEvent.endDate,
+        maxParticipants: existingEvent.maxParticipants,
+        usedKeys: 0,
+        totalKeys: existingEvent.totalKeys,
+        visibility: existingEvent.visibility,
+        logoUrl: existingEvent.logoUrl,
+        sponsorLogos: existingEvent.sponsorLogos as unknown as Prisma.InputJsonValue,
+        sports: existingEvent.sports as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+
+    // Transform to SportEvent type
+    const transformedEvent: SportEvent = {
+      id: newEvent.eventId,
+      name: newEvent.name,
+      type: newEvent.type as "single" | "multi",
+      status: newEvent.status as SportEvent["status"],
+      sports: newEvent.sports as unknown as SportEvent["sports"],
+      location: {
+        city: newEvent.locationCity,
+        venue: newEvent.locationVenue ?? "",
+        coordinates: null,
+        timezone: newEvent.locationTimezone,
+      },
+      startDate: newEvent.startDate.toISOString(),
+      endDate: newEvent.endDate.toISOString(),
+      maxParticipants: newEvent.maxParticipants,
+      usedKeys: newEvent.usedKeys,
+      totalKeys: newEvent.totalKeys,
+      visibility: newEvent.visibility as "public" | "private",
+      logoUrl: newEvent.logoUrl ?? undefined,
+      sponsorLogos: (newEvent.sponsorLogos as unknown as SponsorLogoData[]) ?? undefined,
+    };
+
+    return { success: true, event: transformedEvent };
+  } catch (error) {
+    console.error("Error duplicating event:", error);
+    return {
+      success: false,
+      error: GENERIC_ERROR_MESSAGES.DUPLICATE_FAILED,
+    };
+  }
+}
+
+/**
+ * Export event data as JSON
+ */
+export interface ExportEventResult {
+  success: boolean;
+  data?: string;
+  filename?: string;
+  error?: string;
+}
+
+export async function exportEventData(eventId: string): Promise<ExportEventResult> {
+  // Verify request origin (basic CSRF protection)
+  if (!(await verifyRequestOrigin())) {
+    return { success: false, error: GENERIC_ERROR_MESSAGES.EXPORT_FAILED };
+  }
+
+  try {
+    // Validate eventId format
+    if (!eventId || !/^EVT-\d+$/.test(eventId)) {
+      return { success: false, error: GENERIC_ERROR_MESSAGES.EXPORT_FAILED };
+    }
+
+    const event = await prisma.sportEvent.findUnique({
+      where: { eventId },
+    });
+
+    if (!event) {
+      return { success: false, error: "Event not found" };
+    }
+
+    // Create export data object
+    const exportData = {
+      eventId: event.eventId,
+      name: event.name,
+      type: event.type,
+      status: event.status,
+      location: {
+        city: event.locationCity,
+        venue: event.locationVenue,
+        timezone: event.locationTimezone,
+      },
+      dates: {
+        startDate: event.startDate.toISOString(),
+        endDate: event.endDate.toISOString(),
+      },
+      participants: {
+        max: event.maxParticipants,
+        usedKeys: event.usedKeys,
+        totalKeys: event.totalKeys,
+      },
+      visibility: event.visibility,
+      sports: event.sports,
+      sponsorLogos: event.sponsorLogos,
+      exportedAt: new Date().toISOString(),
+    };
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    // Sanitize filename to prevent path traversal
+    const safeName = event.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+    const filename = `${safeName}_${event.eventId}.json`;
+
+    return { success: true, data: jsonString, filename };
+  } catch (error) {
+    console.error("Error exporting event data:", error);
+    return {
+      success: false,
+      error: GENERIC_ERROR_MESSAGES.EXPORT_FAILED,
     };
   }
 }
