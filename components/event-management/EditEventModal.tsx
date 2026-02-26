@@ -502,7 +502,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
                   <div className="relative">
                     <DropZone
                       label="Drop new logo here"
-                      sublabel="PNG, JPG, WEBP · Max 2 MB"
+                      sublabel="PNG, JPG, WEBP · Max 5 MB"
                       icon={<ImagePlus className="w-4 h-4" strokeWidth={1.75} />}
                       uploaded={eventLogo}
                       onUpload={setEventLogo}

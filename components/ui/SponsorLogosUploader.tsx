@@ -148,7 +148,7 @@ export function SponsorLogosUploader({
                 fontFamily: '"Inter", sans-serif',
               }}
             >
-              PNG, JPG, WEBP · Max 2 MB
+              PNG, JPG, WEBP · Max 5 MB
             </p>
           </div>
         </div>

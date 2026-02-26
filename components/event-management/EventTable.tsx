@@ -1,4 +1,3 @@
-import React from "react";
 import { Trophy } from "lucide-react";
 import { EventRow } from "./EventRow";
 import type { SportEvent, EventHandlers } from "./types";
@@ -23,12 +22,11 @@ export function EventTable({
   isDeleting,
 }: EventTableProps) {
   const columns = [
-    { label: "Event Identity", width: "28%" },
-    { label: "Type", width: "11%" },
-    { label: "Sponsors", width: "10%" },
-    { label: "Timeline", width: "16%" },
-    { label: "Status", width: "10%" },
-    { label: "Key Usage", width: "12%" },
+    { label: "Event Identity", width: "32%" },
+    { label: "Type", width: "13%" },
+    { label: "Timeline", width: "18%" },
+    { label: "Status", width: "11%" },
+    { label: "Key Usage", width: "13%" },
     { label: "Actions", width: "13%", align: "right" as const },
   ];
 
@@ -65,7 +63,7 @@ export function EventTable({
         <tbody>
           {events.length === 0 ? (
             <tr>
-              <td colSpan={7}>
+              <td colSpan={6}>
                 <EmptyState />
               </td>
             </tr>

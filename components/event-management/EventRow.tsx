@@ -42,6 +42,7 @@ export function EventRow({
   const days = DAYS_CONFIG[event.daysVariant];
   const isConfirming = deleteConfirm === event.id;
   const [meatballMenuOpen, setMeatballMenuOpen] = useState(false);
+  const [dropDirection, setDropDirection] = useState<"down" | "up">("down");
   const meatballRef = useRef<HTMLDivElement>(null);
 
   // Close meatball menu when clicking outside
@@ -54,6 +55,23 @@ export function EventRow({
     if (meatballMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [meatballMenuOpen]);
+
+  // Calculate dropdown direction when menu opens
+  useEffect(() => {
+    if (meatballMenuOpen && meatballRef.current) {
+      const rect = meatballRef.current.getBoundingClientRect();
+      const dropdownHeight = 200; // Approximate dropdown height
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      // Show above if not enough space below (with 20px buffer)
+      if (spaceBelow < dropdownHeight + 20 && spaceAbove > spaceBelow) {
+        setDropDirection("up");
+      } else {
+        setDropDirection("down");
+      }
     }
   }, [meatballMenuOpen]);
 
@@ -123,11 +141,6 @@ export function EventRow({
         <EventTypeDisplay type={event.type} sportsCount={event.sports.length} />
       </td>
 
-      {/* Sponsors */}
-      <td style={{ padding: "14px 20px" }}>
-        <SponsorDisplay sponsorLogos={event.sponsorLogos} />
-      </td>
-
       {/* Timeline */}
       <td style={{ padding: "14px 20px" }}>
         <TimelineDisplay startDate={event.startDate} endDate={event.endDate} daysLabel={event.daysLabel} days={days} />
@@ -156,6 +169,7 @@ export function EventRow({
           isDeleting={isDeleting}
           meatballRef={meatballRef}
           handlers={handlers}
+          dropDirection={dropDirection}
         />
       </td>
     </tr>
@@ -205,6 +219,9 @@ interface EventInfoProps {
 }
 
 function EventInfo({ event }: EventInfoProps) {
+  const hasSponsors = event.sponsorLogos && event.sponsorLogos.length > 0;
+  const sponsorCount = hasSponsors ? event.sponsorLogos!.length : 0;
+
   return (
     <div className="min-w-0">
       <div className="flex items-center gap-2">
@@ -241,31 +258,82 @@ function EventInfo({ event }: EventInfoProps) {
           {event.location}
         </span>
       </div>
-      {/* Sport pills */}
-      <div className="flex items-center gap-1 mt-1.5">
-        {event.sports.slice(0, 4).map((s, i) => (
-          <span
-            key={i}
-            className="flex items-center justify-center rounded"
-            style={{
-              width: "20px",
-              height: "20px",
-              backgroundColor: "#F1F5F9",
-              fontSize: "0.7rem",
-            }}
-          >
-            {s}
-          </span>
-        ))}
-        {event.sports.length > 4 && (
-          <span
-            style={{
-              color: "#94A3B8",
-              fontSize: "0.62rem",
-            }}
-          >
-            +{event.sports.length - 4}
-          </span>
+      {/* Sports and Sponsor avatars */}
+      <div className="flex items-center gap-2.5 mt-1.5">
+        {/* Sports avatar group */}
+        <div className="flex items-center gap-1">
+          {event.sports.slice(0, 3).map((s, i) => (
+            <span
+              key={`sport-${i}`}
+              className="flex items-center justify-center rounded border"
+              style={{
+                width: "20px",
+                height: "20px",
+                backgroundColor: "#F1F5F9",
+                border: "1.5px solid #FFFFFF",
+                fontSize: "0.7rem",
+              }}
+              title={`Sport: ${s}`}
+            >
+              {s}
+            </span>
+          ))}
+          {event.sports.length > 3 && (
+            <span
+              className="flex items-center justify-center rounded border font-medium"
+              style={{
+                width: "20px",
+                height: "20px",
+                backgroundColor: "#E2E8F0",
+                border: "1.5px solid #FFFFFF",
+                color: "#64748B",
+                fontSize: "0.6rem",
+              }}
+              title={`+${event.sports.length - 3} more sports`}
+            >
+              +{event.sports.length - 3}
+            </span>
+          )}
+        </div>
+
+        {/* Sponsor logos avatar group */}
+        {hasSponsors && sponsorCount > 0 && (
+          <>
+            <span style={{ color: "#E2E8F0", fontSize: "0.5rem" }}>·</span>
+            <div className="flex items-center gap-1">
+              {event.sponsorLogos!.slice(0, 3).map((sponsor, i) => (
+                <img
+                  key={`sponsor-${i}`}
+                  src={sponsor.url}
+                  alt={sponsor.name}
+                  className="rounded border object-contain"
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    backgroundColor: "#F8FAFC",
+                    border: "1.5px solid #FFFFFF",
+                  }}
+                  title={sponsor.name}
+                />
+              ))}
+              {sponsorCount > 3 && (
+                <span
+                  className="flex items-center justify-center rounded border font-medium"
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    backgroundColor: "#E2E8F0",
+                    border: "1.5px solid #FFFFFF",
+                    color: "#64748B",
+                    fontSize: "0.6rem",
+                  }}
+                  title={`+${sponsorCount - 3} more sponsors`}
+                >
+                  +{sponsorCount - 3}
+                </span>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -329,61 +397,6 @@ function EventTypeDisplay({ type, sportsCount }: EventTypeDisplayProps) {
           1 sport
         </p>
       </div>
-    </div>
-  );
-}
-
-interface SponsorDisplayProps {
-  sponsorLogos?: SportEvent["sponsorLogos"];
-}
-
-function SponsorDisplay({ sponsorLogos }: SponsorDisplayProps) {
-  if (!sponsorLogos || sponsorLogos.length === 0) {
-    return (
-      <span
-        style={{
-          color: "#CBD5E1",
-          fontSize: "0.75rem",
-        }}
-      >
-        —
-      </span>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-1">
-      {sponsorLogos.slice(0, 3).map((sponsor, idx) => (
-        <img
-          key={idx}
-          src={sponsor.url}
-          alt={sponsor.name}
-          style={{
-            width: "20px",
-            height: "20px",
-            borderRadius: "4px",
-            objectFit: "contain",
-            backgroundColor: "#F8FAFC",
-            border: "1px solid #E2E8F0",
-          }}
-          title={sponsor.name}
-        />
-      ))}
-      {sponsorLogos.length > 3 && (
-        <span
-          style={{
-            color: "#64748B",
-            fontSize: "0.6rem",
-            fontWeight: 500,
-            backgroundColor: "#F1F5F9",
-            borderRadius: "4px",
-            padding: "2px 5px",
-            border: "1px solid #E2E8F0",
-          }}
-        >
-          +{sponsorLogos.length - 3}
-        </span>
-      )}
     </div>
   );
 }
@@ -515,6 +528,7 @@ interface ActionsCellProps {
   isDeleting: boolean;
   meatballRef: React.RefObject<HTMLDivElement>;
   handlers: EventHandlers;
+  dropDirection: "down" | "up";
 }
 
 function ActionsCell({
@@ -528,6 +542,7 @@ function ActionsCell({
   isDeleting,
   meatballRef,
   handlers,
+  dropDirection,
 }: ActionsCellProps) {
   if (isConfirming) {
     return (
@@ -624,7 +639,9 @@ function ActionsCell({
         {/* Meatball Dropdown */}
         {meatballMenuOpen && (
           <div
-            className="absolute right-0 top-full mt-1 rounded-lg shadow-xl z-50"
+            className={`absolute right-0 rounded-lg shadow-xl z-50 ${
+              dropDirection === "up" ? "bottom-full mb-1" : "top-full mt-1"
+            }`}
             style={{
               backgroundColor: "#FFFFFF",
               border: "1px solid #E2E8F0",
