@@ -261,7 +261,7 @@ function EventInfo({ event }: EventInfoProps) {
       {/* Sports and Sponsor avatars */}
       <div className="flex items-center gap-2.5 mt-1.5">
         {/* Sports avatar group */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {event.sports.slice(0, 3).map((s, i) => (
             <span
               key={`sport-${i}`}
@@ -300,7 +300,7 @@ function EventInfo({ event }: EventInfoProps) {
         {hasSponsors && sponsorCount > 0 && (
           <>
             <span style={{ color: "#E2E8F0", fontSize: "0.5rem" }}>·</span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {event.sponsorLogos!.slice(0, 3).map((sponsor, i) => (
                 <img
                   key={`sponsor-${i}`}
