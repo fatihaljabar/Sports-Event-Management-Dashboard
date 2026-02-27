@@ -16,7 +16,8 @@ export async function getTimezoneByCoordinates(
   lng: number
 ): Promise<TimezoneResult> {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+    // Use separate API key for Time Zone API (without referer restrictions)
+    const apiKey = process.env.GOOGLE_TIMEZONE_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
     if (!apiKey) {
       return { success: false, error: "API key not configured" };
     }
