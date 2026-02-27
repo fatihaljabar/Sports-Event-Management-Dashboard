@@ -6,6 +6,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import type { SportEvent, SportCategory, SponsorLogoData } from "@/lib/types/event";
 import { Prisma } from "@prisma/client";
+import { checkRateLimit, getClientIp, RATE_LIMIT_CONFIG, type RateLimitType } from "@/lib/rate-limit";
 
 // ═══════════════════════════════════════════════════════════════
 // SECURITY CONSTANTS
@@ -40,7 +41,63 @@ const GENERIC_ERROR_MESSAGES = {
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * Development mode check
+ */
+const isDevelopment = process.env.NODE_ENV === "development";
+
+/**
+ * Dev-only logger to prevent console.log in production
+ */
+const devLog = {
+  log: (...args: unknown[]) => {
+    if (isDevelopment) {
+      console.log(...args);
+    }
+  },
+  error: (...args: unknown[]) => {
+    // Always log errors, but use different handling in prod
+    if (isDevelopment) {
+      console.error(...args);
+    } else {
+      // In production, send to error tracking service (e.g., Sentry)
+      // For now, still log but consider implementing proper error tracking
+      console.error(...args);
+    }
+  },
+  warn: (...args: unknown[]) => {
+    // Always log warnings
+    console.warn(...args);
+  },
+};
+
+/**
+ * Check rate limit for current request
+ * Returns true if rate limited (should block), false if allowed
+ */
+async function isRateLimited(type: RateLimitType = "DEFAULT"): Promise<boolean> {
+  if (isDevelopment) {
+    return false; // Skip rate limiting in development
+  }
+
+  try {
+    const ip = await getClientIp();
+    const result = checkRateLimit(ip, type);
+
+    if (!result.success) {
+      console.warn(`Rate limit exceeded for ${ip}: ${type}`);
+      return true;
+    }
+
+    return false;
+  } catch {
+    // Fail open in case of errors (don't block legitimate requests)
+    return false;
+  }
+}
+
+/**
  * Basic CSRF protection - verify request originates from same site
+ * In production, this FAILS CLOSED (rejects invalid requests)
  * TODO: Enhance with proper CSRF tokens when authentication is implemented
  */
 async function verifyRequestOrigin(): Promise<boolean> {
@@ -56,7 +113,7 @@ async function verifyRequestOrigin(): Promise<boolean> {
         const refererUrl = new URL(referer);
         return refererUrl.host === host;
       } catch {
-        return false;
+        return isDevelopment; // Fail open in dev, closed in prod
       }
     }
 
@@ -66,13 +123,15 @@ async function verifyRequestOrigin(): Promise<boolean> {
         const originUrl = new URL(origin);
         return originUrl.host === host;
       } catch {
-        return false;
+        return isDevelopment; // Fail open in dev, closed in prod
       }
     }
 
-    return true; // Allow for development
+    // No valid origin headers found
+    return isDevelopment; // Fail open in dev, closed in prod
   } catch {
-    return true; // Fail open for development
+    // Header parsing failed
+    return isDevelopment; // Fail open in dev, closed in prod
   }
 }
 
@@ -214,7 +273,7 @@ async function uploadEventLogo(
       return null;
     }
 
-    console.log("Uploading event logo:", storagePath, "Size:", buffer.length, "bytes");
+    devLog.log("Uploading event logo:", storagePath, "Size:", buffer.length, "bytes");
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -229,14 +288,14 @@ async function uploadEventLogo(
       return null;
     }
 
-    console.log("Upload successful, getting public URL...");
+    devLog.log("Upload successful, getting public URL...");
 
     // Get public URL
     const { data: publicUrlData } = supabase.storage
       .from("event-logos")
       .getPublicUrl(storagePath);
 
-    console.log("Public URL:", publicUrlData.publicUrl);
+    devLog.log("Public URL:", publicUrlData.publicUrl);
 
     return publicUrlData.publicUrl;
   } catch (error) {
@@ -255,7 +314,7 @@ async function uploadSponsorLogos(
   const results: SponsorLogoData[] = [];
   const supabase = createServiceClient();
 
-  console.log(`Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
+  devLog.log(`Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
 
   const globalTimestamp = Date.now(); // Single timestamp for all uploads
   const sanitizedEventId = eventId.replace(/[^a-zA-Z0-9-]/g, "");
@@ -297,7 +356,7 @@ async function uploadSponsorLogos(
         continue;
       }
 
-      console.log(`[${i+1}/${sponsorLogos.length}] Uploading sponsor logo:`, storagePath, "Size:", buffer.length, "bytes");
+      devLog.log(`[${i+1}/${sponsorLogos.length}] Uploading sponsor logo:`, storagePath, "Size:", buffer.length, "bytes");
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("event-logos")
@@ -311,20 +370,20 @@ async function uploadSponsorLogos(
         continue;
       }
 
-      console.log(`[${i+1}/${sponsorLogos.length}] Upload successful:`, uploadData?.path);
+      devLog.log(`[${i+1}/${sponsorLogos.length}] Upload successful:`, uploadData?.path);
 
       const { data: publicUrlData } = supabase.storage
         .from("event-logos")
         .getPublicUrl(storagePath);
 
       results.push({ name: sanitizedName, url: publicUrlData.publicUrl });
-      console.log(`[${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
+      devLog.log(`[${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
     } catch (error) {
       console.error(`[${i+1}/${sponsorLogos.length}] Exception uploading sponsor logo:`, error);
     }
   }
 
-  console.log(`Sponsor logos upload complete. ${results.length}/${sponsorLogos.length} successful.`);
+  devLog.log(`Sponsor logos upload complete. ${results.length}/${sponsorLogos.length} successful.`);
   return results;
 }
 
@@ -335,6 +394,11 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
   // Verify request origin (basic CSRF protection)
   if (!(await verifyRequestOrigin())) {
     return { success: false, error: GENERIC_ERROR_MESSAGES.CREATE_FAILED };
+  }
+
+  // Rate limiting (use UPLOAD limit since this includes file uploads)
+  if (await isRateLimited("UPLOAD")) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   try {
@@ -395,17 +459,17 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
     // Upload logo if provided
     let logoUrl: string | null = null;
     if (data.logoBase64 && data.logoFileName) {
-      console.log("Uploading logo for event:", eventId);
+      devLog.log("Uploading logo for event:", eventId);
       logoUrl = await uploadEventLogo(data.logoBase64, data.logoFileName, eventId);
-      console.log("Logo uploaded, URL:", logoUrl);
+      devLog.log("Logo uploaded, URL:", logoUrl);
     }
 
     // Upload sponsor logos if provided
     let uploadedSponsors: SponsorLogoData[] = [];
     if (data.sponsorLogos && data.sponsorLogos.length > 0) {
-      console.log("Uploading sponsor logos for event:", eventId);
+      devLog.log("Uploading sponsor logos for event:", eventId);
       uploadedSponsors = await uploadSponsorLogos(data.sponsorLogos, eventId);
-      console.log("Sponsor logos uploaded:", uploadedSponsors.length);
+      devLog.log("Sponsor logos uploaded:", uploadedSponsors.length);
     }
 
     // Create event in database
@@ -551,6 +615,11 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     return { success: false, error: GENERIC_ERROR_MESSAGES.DELETE_FAILED };
   }
 
+  // Rate limiting (use STRICT limit for destructive operations)
+  if (await isRateLimited("STRICT")) {
+    return { success: false, error: "Too many requests. Please try again later." };
+  }
+
   try {
     // Validate eventId format to prevent injection
     if (!eventId || !/^EVT-\d+$/.test(eventId)) {
@@ -587,7 +656,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
           if (deleteError) {
             console.error("Error deleting event logo from storage:", deleteError);
           } else {
-            console.log("Deleted event logo:", storagePath);
+            devLog.log("Deleted event logo:", storagePath);
           }
         }
       } catch (error) {
@@ -611,7 +680,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
             if (deleteError) {
               console.error("Error deleting sponsor logo from storage:", deleteError);
             } else {
-              console.log("Deleted sponsor logo:", storagePath);
+              devLog.log("Deleted sponsor logo:", storagePath);
             }
           }
         } catch (error) {
@@ -670,6 +739,11 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
   // Verify request origin (basic CSRF protection)
   if (!(await verifyRequestOrigin())) {
     return { success: false, error: GENERIC_ERROR_MESSAGES.UPDATE_FAILED };
+  }
+
+  // Rate limiting (use UPLOAD limit since this includes file uploads)
+  if (await isRateLimited("UPLOAD")) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   try {
@@ -736,9 +810,9 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
     // Upload new logo if provided
     let logoUrl: string | null = existingEvent.logoUrl;
     if (data.logoBase64 && data.logoFileName && !data.keepExistingLogo) {
-      console.log("Uploading new logo for event:", data.eventId);
+      devLog.log("Uploading new logo for event:", data.eventId);
       logoUrl = await uploadEventLogo(data.logoBase64, data.logoFileName, data.eventId);
-      console.log("New logo uploaded, URL:", logoUrl);
+      devLog.log("New logo uploaded, URL:", logoUrl);
     }
 
     // Handle sponsor logos
@@ -765,9 +839,9 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
       }
 
       // Upload new sponsor logos
-      console.log("Uploading new sponsor logos for event:", data.eventId);
+      devLog.log("Uploading new sponsor logos for event:", data.eventId);
       uploadedSponsors = await uploadSponsorLogos(data.sponsorLogos, data.eventId);
-      console.log("New sponsor logos uploaded:", uploadedSponsors.length);
+      devLog.log("New sponsor logos uploaded:", uploadedSponsors.length);
     } else if (data.keepExistingSponsors && existingSponsors) {
       uploadedSponsors = existingSponsors;
     }
@@ -842,6 +916,11 @@ export async function archiveEvent(eventId: string): Promise<ArchiveEventResult>
     return { success: false, error: GENERIC_ERROR_MESSAGES.ARCHIVE_FAILED };
   }
 
+  // Rate limiting (use DEFAULT limit)
+  if (await isRateLimited("DEFAULT")) {
+    return { success: false, error: "Too many requests. Please try again later." };
+  }
+
   try {
     // Validate eventId format
     if (!eventId || !/^EVT-\d+$/.test(eventId)) {
@@ -886,6 +965,11 @@ export async function unarchiveEvent(eventId: string): Promise<UnarchiveEventRes
   // Verify request origin (basic CSRF protection)
   if (!(await verifyRequestOrigin())) {
     return { success: false, error: GENERIC_ERROR_MESSAGES.UNARCHIVE_FAILED };
+  }
+
+  // Rate limiting (use DEFAULT limit)
+  if (await isRateLimited("DEFAULT")) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   try {
@@ -948,6 +1032,11 @@ export async function duplicateEvent(eventId: string): Promise<DuplicateEventRes
   // Verify request origin (basic CSRF protection)
   if (!(await verifyRequestOrigin())) {
     return { success: false, error: GENERIC_ERROR_MESSAGES.DUPLICATE_FAILED };
+  }
+
+  // Rate limiting (use STRICT limit for duplication)
+  if (await isRateLimited("STRICT")) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   try {
@@ -1046,6 +1135,11 @@ export async function exportEventData(eventId: string): Promise<ExportEventResul
   // Verify request origin (basic CSRF protection)
   if (!(await verifyRequestOrigin())) {
     return { success: false, error: GENERIC_ERROR_MESSAGES.EXPORT_FAILED };
+  }
+
+  // Rate limiting (use LENIENT limit for export operations)
+  if (await isRateLimited("LENIENT")) {
+    return { success: false, error: "Too many requests. Please try again later." };
   }
 
   try {
