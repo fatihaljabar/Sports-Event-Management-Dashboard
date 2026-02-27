@@ -89,7 +89,33 @@ function loadGooglePlacesScript(callback: () => void) {
   document.head.appendChild(script);
 }
 
-function getTimezoneFromCoordinates(lat: number, lng: number): string {
+// Fetch timezone from Google Time Zone API
+async function getTimezoneFromCoordinates(lat: number, lng: number): Promise<string> {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  if (!apiKey) {
+    return "Asia/Jakarta"; // Default fallback
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const url = `https://maps.googleapis.com/maps/api/timezone/json?location=${lat},${lng}&timestamp=${timestamp}&key=${apiKey}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === "OK" && data.timeZoneId) {
+      return data.timeZoneId;
+    }
+  } catch (error) {
+    console.error("[Timezone API] Error fetching timezone:", error);
+  }
+
+  // Fallback to approximation if API fails
+  return getTimezoneByLocationFallback(lat, lng);
+}
+
+// Fallback timezone approximation (used when API fails)
+function getTimezoneByLocationFallback(lat: number, lng: number): string {
   // Indonesia timezones approximation
   if (lng >= 95 && lng <= 141) {
     if (lat >= -11 && lat <= -6) return "Asia/Makassar"; // WITA
@@ -201,11 +227,11 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         placeId,
         fields: ["geometry", "address_components"],
       },
-      (place: GooglePlaceDetails | null, status: string) => {
+      async (place: GooglePlaceDetails | null, status: string) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
-          const timezone = getTimezoneFromCoordinates(lat, lng);
+          const timezone = await getTimezoneFromCoordinates(lat, lng);
           onChange(description, timezone, { lat, lng });
         } else {
           const timezone = getTimezoneByLocation(description);
@@ -216,12 +242,16 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   }, [onChange]);
 
   // Select a location
-  const selectLocation = useCallback((location: string, placeId?: string) => {
+  const selectLocation = useCallback(async (location: string, placeId?: string, coordinates?: { lat: number; lng: number }) => {
     setQuery(location);
     setIsOpen(false);
     setPredictions([]);
 
-    if (placeId) {
+    if (coordinates) {
+      // Fetch timezone using coordinates
+      const timezone = await getTimezoneFromCoordinates(coordinates.lat, coordinates.lng);
+      onChange(location, timezone, coordinates);
+    } else if (placeId) {
       getPlaceDetails(placeId, location);
     } else {
       const timezone = getTimezoneByLocation(location);
@@ -390,7 +420,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 // Location Modal Component
 interface LocationModalProps {
   onClose: () => void;
-  onSelect: (location: string, placeId?: string) => void;
+  onSelect: (location: string, placeId?: string, coordinates?: { lat: number; lng: number }) => void;
 }
 
 function LocationModal({ onClose, onSelect }: LocationModalProps) {
@@ -612,7 +642,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   }, [search]);
 
   // Get place details and select
-  const handleSelectPlace = useCallback((prediction: GooglePrediction) => {
+  const handleSelectPlace = useCallback(async (prediction: GooglePrediction) => {
     // Mark that user has clicked a result - disable hover preview
     setHasSelectedResult(true);
 
@@ -628,7 +658,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
         placeId: prediction.place_id,
         fields: ["geometry", "address_components"],
       },
-      (place: GooglePlaceDetails | null, status: string) => {
+      async (place: GooglePlaceDetails | null, status: string) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
@@ -637,7 +667,8 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           updateMarker(lat, lng);
           setSelectedLocation({ lat, lng, name: prediction.description });
 
-          onSelect(prediction.description, prediction.place_id);
+          // Pass coordinates for timezone detection
+          onSelect(prediction.description, prediction.place_id, { lat, lng });
         } else {
           onSelect(prediction.description);
         }
@@ -648,9 +679,10 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   }, [onSelect]);
 
   // Confirm selection and close
-  const handleConfirmSelection = useCallback(() => {
+  const handleConfirmSelection = useCallback(async () => {
     if (selectedLocation) {
-      onSelect(selectedLocation.name);
+      // Pass coordinates for timezone detection
+      onSelect(selectedLocation.name, undefined, { lat: selectedLocation.lat, lng: selectedLocation.lng });
     }
     onClose();
   }, [selectedLocation, onSelect, onClose]);
