@@ -455,6 +455,13 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   const [isInitializing, setIsInitializing] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
 
+  // Map related refs and state
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const geocoderRef = useRef<any>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+
   // Load Google Places script when modal opens
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
@@ -462,14 +469,20 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     // Debug: log API key presence
     console.log("[LocationModal] API Key exists:", !!apiKey);
 
-    // Initialize autocomplete service if already available
+    // Initialize autocomplete service and map
     const initializeService = () => {
       try {
         if (window.google?.maps?.places) {
           autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+          geocoderRef.current = new window.google.maps.Geocoder();
           setHasGooglePlaces(true);
           setIsInitializing(false);
           console.log("[LocationModal] Google Places initialized successfully");
+
+          // Initialize map if container is ready
+          if (mapRef.current && !mapInstanceRef.current) {
+            initializeMap();
+          }
           return true;
         }
         return false;
@@ -481,6 +494,52 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
       }
     };
 
+    // Initialize the map
+    const initializeMap = () => {
+      if (!mapRef.current || !window.google?.maps?.Map) return;
+
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: { lat: -6.2088, lng: 106.8456 }, // Jakarta default
+        zoom: 11,
+        styles: [
+          { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "on" }] },
+          { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
+          { featureType: "administrative.neighborhood", stylers: [{ visibility: "off" }] },
+          { featureType: "poi", stylers: [{ visibility: "off" }] },
+          { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
+          { featureType: "road", elementType: "geometry", stylers: [{ visibility: "simplified" }] },
+          { featureType: "water", stylers: [{ color: "#aadaff" }] },
+        ],
+      });
+
+      mapInstanceRef.current = map;
+
+      // Add click listener to map
+      map.addListener("click", async (e: any) => {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+
+        // Update marker
+        updateMarker(lat, lng);
+
+        // Reverse geocode to get location name
+        if (geocoderRef.current) {
+          geocoderRef.current.geocode(
+            { location: { lat, lng } },
+            (results: any[], status: string) => {
+              if (status === "OK" && results?.[0]) {
+                const locationName = results[0].formatted_address;
+                setSelectedLocation({ lat, lng, name: locationName });
+                setSearch(locationName);
+              }
+            }
+          );
+        }
+      });
+
+      console.log("[LocationModal] Map initialized");
+    };
+
     // Try to initialize immediately if already loaded
     if (initializeService()) {
       return;
@@ -490,7 +549,9 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     if (apiKey) {
       loadGooglePlacesScript(() => {
         console.log("[LocationModal] Script loaded, initializing...");
-        setTimeout(() => initializeService(), 100);
+        setTimeout(() => {
+          initializeService();
+        }, 100);
       });
     } else {
       console.error("[LocationModal] No API key found");
@@ -498,6 +559,44 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
       setIsInitializing(false);
     }
   }, []);
+
+  // Update marker position
+  const updateMarker = (lat: number, lng: number) => {
+    if (!window.google?.maps?.Marker) return;
+
+    if (markerRef.current) {
+      markerRef.current.setPosition({ lat, lng });
+    } else {
+      markerRef.current = new window.google.maps.Marker({
+        position: { lat, lng },
+        map: mapInstanceRef.current,
+        animation: window.google.maps.Animation.DROP,
+      });
+    }
+
+    // Center map on new location
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.panTo({ lat, lng });
+    }
+  };
+
+  // Pan map to location when prediction is hovered
+  const handlePredictionHover = (prediction: GooglePrediction) => {
+    if (!window.google?.maps?.places?.PlacesService || !mapInstanceRef.current) return;
+
+    const service = new window.google.maps.places.PlacesService(document.createElement("div"));
+    service.getDetails(
+      { placeId: prediction.place_id, fields: ["geometry"] },
+      (place: any, status: string) => {
+        if (status === "OK" && place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          mapInstanceRef.current.panTo({ lat, lng });
+          updateMarker(lat, lng);
+        }
+      }
+    );
+  };
 
   // Fetch predictions (worldwide search, no country restriction)
   useEffect(() => {
@@ -548,14 +647,28 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
           const timezone = getTimezoneFromCoordinates(lat, lng);
+
+          // Update map marker and center
+          updateMarker(lat, lng);
+          setSelectedLocation({ lat, lng, name: prediction.description });
+
           onSelect(prediction.description, prediction.place_id);
         } else {
           onSelect(prediction.description);
         }
-        onClose();
+        // Don't close immediately - let user see the map
+        // onClose();
       }
     );
-  }, [onClose, onSelect]);
+  }, [onSelect]);
+
+  // Confirm selection and close
+  const handleConfirmSelection = useCallback(() => {
+    if (selectedLocation) {
+      onSelect(selectedLocation.name);
+    }
+    onClose();
+  }, [selectedLocation, onSelect, onClose]);
 
   return (
     <div
@@ -567,8 +680,8 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
         className="relative rounded-2xl overflow-hidden"
         style={{
           width: "100%",
-          maxWidth: "600px",
-          maxHeight: "80vh",
+          maxWidth: "800px",
+          maxHeight: "90vh",
           backgroundColor: "#FFFFFF",
           boxShadow: "0px 24px 80px rgba(0,0,0,0.22)",
         }}
@@ -663,10 +776,39 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           </div>
         </div>
 
-        {/* Results */}
+        {/* Map Container */}
+        {!isInitializing && !initError && (
+          <div style={{ height: "280px", position: "relative" }}>
+            <div
+              ref={mapRef}
+              style={{ width: "100%", height: "100%" }}
+            />
+            {/* Selected location overlay */}
+            {selectedLocation && (
+              <div
+                className="absolute bottom-3 left-3 right-3 rounded-xl px-3 py-2"
+                style={{
+                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                  backdropFilter: "blur(8px)",
+                  boxShadow: "0px 4px 16px rgba(0,0,0,0.12)",
+                  border: "1px solid #E2E8F0",
+                }}
+              >
+                <div style={{ fontSize: "0.75rem", color: "#64748B", fontFamily: '"Inter", sans-serif' }}>
+                  Selected Location
+                </div>
+                <div style={{ fontSize: "0.875rem", color: "#1E293B", fontFamily: '"Inter", sans-serif', fontWeight: 500 }}>
+                  {selectedLocation.name}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Search Results Panel */}
         <div
           className="overflow-y-auto"
-          style={{ maxHeight: "calc(80vh - 140px)" }}
+          style={{ maxHeight: predictions.length > 0 ? "200px" : "150px" }}
         >
           {/* Initializing state */}
           {isInitializing && (
@@ -721,6 +863,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                   key={prediction.place_id}
                   type="button"
                   onClick={() => handleSelectPlace(prediction)}
+                  onMouseEnter={() => handlePredictionHover(prediction)}
                   className="w-full px-5 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
                   style={{ borderBottom: "1px solid #F8FAFC" }}
                 >
@@ -778,19 +921,71 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           {/* Empty state when no search */}
           {predictions.length === 0 && !search && !isLoading && !isInitializing && !initError && (
             <div
-              className="px-5 py-12 text-center flex flex-col items-center gap-3"
+              className="px-5 py-8 text-center flex flex-col items-center gap-2"
               style={{ color: "#94A3B8" }}
             >
-              <MapPin className="w-12 h-12" strokeWidth={1.5} style={{ color: "#CBD5E1" }} />
-              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.875rem" }}>
-                Start typing to search for cities worldwide
-              </div>
-              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.75rem", color: "#64748B" }}>
-                Powered by Google Places
+              <MapPin className="w-10 h-10" strokeWidth={1.5} style={{ color: "#CBD5E1" }} />
+              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.8rem" }}>
+                Search for a city or click on the map
               </div>
             </div>
           )}
         </div>
+
+        {/* Footer Actions */}
+        {!isInitializing && !initError && (
+          <div
+            className="flex items-center justify-between px-5 py-3"
+            style={{ borderTop: "1px solid #F1F5F9" }}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm transition-all"
+              style={{
+                fontFamily: '"Inter", sans-serif',
+                fontWeight: 500,
+                backgroundColor: "#F8FAFC",
+                border: "1.5px solid #E2E8F0",
+                color: "#64748B",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F1F5F9";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC";
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmSelection}
+              disabled={!selectedLocation}
+              className="px-5 py-2 rounded-lg text-sm transition-all flex items-center gap-2"
+              style={{
+                fontFamily: '"Inter", sans-serif',
+                fontWeight: 500,
+                backgroundColor: selectedLocation ? "#2563EB" : "#94A3B8",
+                border: "none",
+                color: "#FFFFFF",
+                opacity: selectedLocation ? 1 : 0.6,
+                cursor: selectedLocation ? "pointer" : "not-allowed",
+              }}
+              onMouseEnter={(e) => {
+                if (selectedLocation) {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1D4ED8";
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = selectedLocation ? "#2563EB" : "#94A3B8";
+              }}
+            >
+              <MapPin strokeWidth={2} width={14} height={14} />
+              {selectedLocation ? "Confirm Location" : "Select a Location"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
