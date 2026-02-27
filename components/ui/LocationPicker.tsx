@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { MapPin, X, Search, Loader2 } from "lucide-react";
 import { getTimezoneByLocation } from "@/lib/constants/locations";
+import { getTimezoneByCoordinates } from "@/app/actions/timezone";
 
 interface LocationPickerProps {
   value: string;
@@ -89,36 +90,20 @@ function loadGooglePlacesScript(callback: () => void) {
   document.head.appendChild(script);
 }
 
-// Fetch timezone from Google Time Zone API
+// Fetch timezone from Google Time Zone API via Server Action
 async function getTimezoneFromCoordinates(lat: number, lng: number): Promise<string> {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (!apiKey) {
-    console.warn("[Timezone API] No API key found, using fallback");
-    return "Asia/Jakarta"; // Default fallback
-  }
-
-  const timestamp = Math.floor(Date.now() / 1000);
-  const url = `https://maps.googleapis.com/maps/api/timezone/json?location=${lat},${lng}&timestamp=${timestamp}&key=${apiKey}`;
-
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-
-    console.log("[Timezone API] Response:", data);
-
-    if (data.status === "OK" && data.timeZoneId) {
-      console.log("[Timezone API] Detected timezone:", data.timeZoneId, "for coords:", { lat, lng });
-      return data.timeZoneId;
-    } else {
-      console.warn("[Timezone API] Status not OK:", data.status, data);
+    const result = await getTimezoneByCoordinates(lat, lng);
+    if (result.success && result.timezone) {
+      return result.timezone;
     }
   } catch (error) {
-    console.error("[Timezone API] Error fetching timezone:", error);
+    console.error("[Timezone] Error calling server action:", error);
   }
 
   // Fallback to approximation if API fails
   const fallback = getTimezoneByLocationFallback(lat, lng);
-  console.log("[Timezone API] Using fallback timezone:", fallback);
+  console.log("[Timezone] Using fallback timezone:", fallback);
   return fallback;
 }
 
