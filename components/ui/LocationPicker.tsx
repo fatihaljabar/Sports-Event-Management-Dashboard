@@ -465,24 +465,16 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   // Load Google Places script when modal opens
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-
-    // Debug: log API key presence
     console.log("[LocationModal] API Key exists:", !!apiKey);
 
-    // Initialize autocomplete service and map
-    const initializeService = () => {
+    const initializeServices = () => {
       try {
         if (window.google?.maps?.places) {
           autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
           geocoderRef.current = new window.google.maps.Geocoder();
           setHasGooglePlaces(true);
           setIsInitializing(false);
-          console.log("[LocationModal] Google Places initialized successfully");
-
-          // Initialize map if container is ready
-          if (mapRef.current && !mapInstanceRef.current) {
-            initializeMap();
-          }
+          console.log("[LocationModal] Services initialized successfully");
           return true;
         }
         return false;
@@ -494,64 +486,16 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
       }
     };
 
-    // Initialize the map
-    const initializeMap = () => {
-      if (!mapRef.current || !window.google?.maps?.Map) return;
-
-      const map = new window.google.maps.Map(mapRef.current, {
-        center: { lat: -6.2088, lng: 106.8456 }, // Jakarta default
-        zoom: 11,
-        styles: [
-          { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "on" }] },
-          { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
-          { featureType: "administrative.neighborhood", stylers: [{ visibility: "off" }] },
-          { featureType: "poi", stylers: [{ visibility: "off" }] },
-          { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
-          { featureType: "road", elementType: "geometry", stylers: [{ visibility: "simplified" }] },
-          { featureType: "water", stylers: [{ color: "#aadaff" }] },
-        ],
-      });
-
-      mapInstanceRef.current = map;
-
-      // Add click listener to map
-      map.addListener("click", async (e: any) => {
-        const lat = e.latLng.lat();
-        const lng = e.latLng.lng();
-
-        // Update marker
-        updateMarker(lat, lng);
-
-        // Reverse geocode to get location name
-        if (geocoderRef.current) {
-          geocoderRef.current.geocode(
-            { location: { lat, lng } },
-            (results: any[], status: string) => {
-              if (status === "OK" && results?.[0]) {
-                const locationName = results[0].formatted_address;
-                setSelectedLocation({ lat, lng, name: locationName });
-                setSearch(locationName);
-              }
-            }
-          );
-        }
-      });
-
-      console.log("[LocationModal] Map initialized");
-    };
-
     // Try to initialize immediately if already loaded
-    if (initializeService()) {
+    if (initializeServices()) {
       return;
     }
 
     // Load script and then initialize
     if (apiKey) {
       loadGooglePlacesScript(() => {
-        console.log("[LocationModal] Script loaded, initializing...");
-        setTimeout(() => {
-          initializeService();
-        }, 100);
+        console.log("[LocationModal] Script loaded, initializing services...");
+        initializeServices();
       });
     } else {
       console.error("[LocationModal] No API key found");
@@ -560,9 +504,95 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     }
   }, []);
 
-  // Update marker position
+  // Initialize map when services are ready and ref is available
+  useEffect(() => {
+    if (!hasGooglePlaces || mapInstanceRef.current) {
+      return;
+    }
+
+    // Wait for the map container to be rendered with proper dimensions
+    const initializeWithDelay = () => {
+      if (!mapRef.current) {
+        console.log("[LocationModal] Map ref not ready, retrying...");
+        setTimeout(initializeWithDelay, 100);
+        return;
+      }
+
+      const rect = mapRef.current.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        console.log("[LocationModal] Map container has no dimensions, retrying...");
+        setTimeout(initializeWithDelay, 100);
+        return;
+      }
+
+      console.log("[LocationModal] Initializing map...", { width: rect.width, height: rect.height });
+
+      try {
+        const map = new window.google.maps.Map(mapRef.current, {
+          center: { lat: -6.2088, lng: 106.8456 }, // Jakarta default
+          zoom: 11,
+          styles: [
+            { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "on" }] },
+            { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
+            { featureType: "administrative.neighborhood", stylers: [{ visibility: "off" }] },
+            { featureType: "poi", stylers: [{ visibility: "off" }] },
+            { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
+            { featureType: "road", elementType: "geometry", stylers: [{ visibility: "simplified" }] },
+            { featureType: "water", stylers: [{ color: "#aadaff" }] },
+          ],
+        });
+
+        mapInstanceRef.current = map;
+
+        // Add click listener to map
+        map.addListener("click", (e: any) => {
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
+
+          // Update marker
+          if (window.google?.maps?.Marker) {
+            if (markerRef.current) {
+              markerRef.current.setPosition({ lat, lng });
+            } else {
+              markerRef.current = new window.google.maps.Marker({
+                position: { lat, lng },
+                map: mapInstanceRef.current,
+                animation: window.google.maps.Animation.DROP,
+              });
+            }
+          }
+
+          // Center map on new location
+          map.panTo({ lat, lng });
+
+          // Reverse geocode to get location name
+          if (geocoderRef.current) {
+            geocoderRef.current.geocode(
+              { location: { lat, lng } },
+              (results: any[], status: string) => {
+                if (status === "OK" && results?.[0]) {
+                  const locationName = results[0].formatted_address;
+                  setSelectedLocation({ lat, lng, name: locationName });
+                  setSearch(locationName);
+                }
+              }
+            );
+          }
+        });
+
+        console.log("[LocationModal] Map initialized successfully");
+      } catch (error) {
+        console.error("[LocationModal] Map initialization failed:", error);
+      }
+    };
+
+    // Start initialization with delay
+    initializeWithDelay();
+  }, [hasGooglePlaces]);
+
+  // Update marker position (for external calls)
   const updateMarker = (lat: number, lng: number) => {
-    if (!window.google?.maps?.Marker) return;
+    if (!window.google?.maps?.Marker || !mapInstanceRef.current) return;
 
     if (markerRef.current) {
       markerRef.current.setPosition({ lat, lng });
@@ -574,10 +604,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
       });
     }
 
-    // Center map on new location
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.panTo({ lat, lng });
-    }
+    mapInstanceRef.current.panTo({ lat, lng });
   };
 
   // Pan map to location when prediction is hovered
