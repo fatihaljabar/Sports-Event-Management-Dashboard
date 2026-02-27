@@ -225,11 +225,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
           const timezone = await getTimezoneFromCoordinates(lat, lng);
-          console.log("[LocationPicker] Calling onChange with timezone:", timezone);
           onChange(description, timezone, { lat, lng });
         } else {
           const timezone = getTimezoneByLocation(description);
-          console.log("[LocationPicker] Calling onChange with fallback timezone:", timezone);
           onChange(description, timezone);
         }
       }
@@ -238,7 +236,6 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
   // Select a location
   const selectLocation = useCallback(async (location: string, placeId?: string, coordinates?: { lat: number; lng: number }) => {
-    console.log("[LocationPicker] selectLocation called with:", { location, placeId, coordinates });
     setQuery(location);
     setIsOpen(false);
     setPredictions([]);
@@ -246,13 +243,11 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     if (coordinates) {
       // Fetch timezone using coordinates
       const timezone = await getTimezoneFromCoordinates(coordinates.lat, coordinates.lng);
-      console.log("[LocationPicker] Calling onChange from selectLocation with timezone:", timezone);
       onChange(location, timezone, coordinates);
     } else if (placeId) {
       getPlaceDetails(placeId, location);
     } else {
       const timezone = getTimezoneByLocation(location);
-      console.log("[LocationPicker] Calling onChange with name-only timezone:", timezone);
       onChange(location, timezone);
     }
   }, [onChange, getPlaceDetails]);
@@ -441,7 +436,6 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   // Load Google Places script when modal opens
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-    console.log("[LocationModal] API Key exists:", !!apiKey);
 
     const initializeServices = () => {
       try {
@@ -450,7 +444,6 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           geocoderRef.current = new window.google.maps.Geocoder();
           setHasGooglePlaces(true);
           setIsInitializing(false);
-          console.log("[LocationModal] Services initialized successfully");
           return true;
         }
         return false;
@@ -470,7 +463,6 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     // Load script and then initialize
     if (apiKey) {
       loadGooglePlacesScript(() => {
-        console.log("[LocationModal] Script loaded, initializing services...");
         initializeServices();
       });
     } else {
@@ -489,19 +481,15 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     // Wait for the map container to be rendered with proper dimensions
     const initializeWithDelay = () => {
       if (!mapRef.current) {
-        console.log("[LocationModal] Map ref not ready, retrying...");
         setTimeout(initializeWithDelay, 100);
         return;
       }
 
       const rect = mapRef.current.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
-        console.log("[LocationModal] Map container has no dimensions, retrying...");
         setTimeout(initializeWithDelay, 100);
         return;
       }
-
-      console.log("[LocationModal] Initializing map...", { width: rect.width, height: rect.height });
 
       try {
         const map = new window.google.maps.Map(mapRef.current, {
@@ -559,8 +547,6 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
             );
           }
         });
-
-        console.log("[LocationModal] Map initialized successfully");
       } catch (error) {
         console.error("[LocationModal] Map initialization failed:", error);
       }
@@ -678,9 +664,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
 
   // Confirm selection and close
   const handleConfirmSelection = useCallback(async () => {
-    console.log("[LocationModal] Confirm selection called with:", selectedLocation);
     if (selectedLocation) {
-      console.log("[LocationModal] Passing to onSelect with coords:", { lat: selectedLocation.lat, lng: selectedLocation.lng });
       // Pass coordinates for timezone detection
       onSelect(selectedLocation.name, undefined, { lat: selectedLocation.lat, lng: selectedLocation.lng });
     }

@@ -28,10 +28,7 @@ export async function getTimezoneByCoordinates(
     const response = await fetch(url);
     const data = await response.json();
 
-    console.log("[Server Timezone API] Response:", data);
-
     if (data.status === "OK" && data.timeZoneId) {
-      console.log("[Server Timezone API] Detected timezone:", data.timeZoneId, "for coords:", { lat, lng });
       return { success: true, timezone: data.timeZoneId };
     }
 
@@ -39,8 +36,7 @@ export async function getTimezoneByCoordinates(
       success: false,
       error: data.status || "Unknown error",
     };
-  } catch (error) {
-    console.error("[Server Timezone API] Error:", error);
+  } catch {
     return { success: false, error: "Failed to fetch timezone" };
   }
 }
