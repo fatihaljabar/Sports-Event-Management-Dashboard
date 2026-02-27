@@ -78,7 +78,11 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
   }, [clearSpecificError]);
 
   // Handle location change with timezone detection (from LocationPicker)
-  const handleLocationChange = useCallback((value: string, timezoneFromPicker?: string) => {
+  const handleLocationChange = useCallback((
+    value: string,
+    timezoneFromPicker?: string,
+    coordinates?: { lat: number; lng: number }
+  ) => {
     setLocation(value);
     // Use timezone from picker if provided, otherwise fallback to detection
     if (timezoneFromPicker) {
@@ -86,6 +90,10 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     } else {
       const detectedTimezone = getTimezoneByLocation(value);
       setTimezone(detectedTimezone);
+    }
+    // Coordinates could be stored for future map features
+    if (coordinates) {
+      console.log("Location coordinates:", coordinates);
     }
   }, []);
 

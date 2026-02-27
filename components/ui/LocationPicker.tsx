@@ -1,26 +1,204 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { MapPin, X, Search } from "lucide-react";
+import { MapPin, X, Search, Loader2 } from "lucide-react";
 import { LOCATION_OPTIONS, getTimezoneByLocation } from "@/lib/constants/locations";
 
 interface LocationPickerProps {
   value: string;
-  onChange: (value: string, timezone?: string) => void;
+  onChange: (value: string, timezone?: string, coordinates?: { lat: number; lng: number }) => void;
+}
+
+// Google Places Autocomplete types
+interface GooglePrediction {
+  description: string;
+  place_id: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+}
+
+interface GooglePlaceDetails {
+  geometry: {
+    location: {
+      lat: () => number;
+      lng: () => number;
+    };
+  };
+  address_components: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>;
+}
+
+// Global callback for Google Places API
+declare global {
+  interface Window {
+    initGooglePlacesAutocomplete?: () => void;
+    google?: any;
+  }
+}
+
+let isGoogleScriptLoaded = false;
+let isGoogleScriptLoading = false;
+
+function loadGooglePlacesScript(callback: () => void) {
+  if (isGoogleScriptLoaded || window.google?.maps?.places) {
+    callback();
+    return;
+  }
+
+  if (isGoogleScriptLoading) {
+    // Wait for loading to complete
+    const checkInterval = setInterval(() => {
+      if (isGoogleScriptLoaded || window.google?.maps?.places) {
+        clearInterval(checkInterval);
+        callback();
+      }
+    }, 100);
+    return;
+  }
+
+  isGoogleScriptLoading = true;
+
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    console.warn("Google Maps API key not found");
+    isGoogleScriptLoading = false;
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlacesAutocomplete`;
+  script.async = true;
+  script.defer = true;
+
+  window.initGooglePlacesAutocomplete = () => {
+    isGoogleScriptLoaded = true;
+    isGoogleScriptLoading = false;
+    callback();
+  };
+
+  script.onerror = () => {
+    console.error("Failed to load Google Places API");
+    isGoogleScriptLoading = false;
+  };
+
+  document.head.appendChild(script);
+}
+
+function getTimezoneFromCoordinates(lat: number, lng: number): string {
+  // Rough timezone estimation based on longitude
+  // Each 15 degrees = 1 hour timezone
+  const offset = Math.round(lng / 15);
+  const hours = Math.abs(offset);
+  const sign = offset >= 0 ? "+" : "-";
+
+  // Indonesia timezones approximation
+  if (lng >= 95 && lng <= 141) {
+    if (lat >= -11 && lat <= -6) return "Asia/Makassar"; // WITA
+    if (lat >= -6 && lat <= 0) return "Asia/Jakarta"; // WIB
+    if (lat >= 0 && lat <= 6) return "Asia/Jayapura"; // WIT
+  }
+
+  // Major cities timezones
+  const majorTimezones: Record<string, string> = {
+    "Jakarta": "Asia/Jakarta",
+    "Singapore": "Asia/Singapore",
+    "Bangkok": "Asia/Bangkok",
+    "Kuala Lumpur": "Asia/Kuala_Lumpur",
+    "Manila": "Asia/Manila",
+    "Tokyo": "Asia/Tokyo",
+    "Seoul": "Asia/Seoul",
+    "Beijing": "Asia/Shanghai",
+    "Sydney": "Australia/Sydney",
+    "Delhi": "Asia/Kolkata",
+    "Dubai": "Asia/Dubai",
+    "London": "Europe/London",
+    "Paris": "Europe/Paris",
+    "New York": "America/New_York",
+    "Los Angeles": "America/Los_Angeles",
+  };
+
+  return `UTC${sign}${String(hours).padStart(2, '0')}:00`;
 }
 
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState(value);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [useGooglePlaces, setUseGooglePlaces] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteServiceRef = useRef<any>(null);
+
+  // Load Google Places API on mount
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (apiKey) {
+      loadGooglePlacesScript(() => {
+        if (window.google?.maps?.places) {
+          setUseGooglePlaces(true);
+          autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+        }
+      });
+    }
+  }, []);
 
   // Update local state when value prop changes
   useEffect(() => {
     setQuery(value);
   }, [value]);
 
-  // Filter locations based on query
+  // Fetch predictions from Google Places
+  const fetchPredictions = useCallback(async (input: string) => {
+    if (!input || !autocompleteServiceRef.current) {
+      setPredictions([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      autocompleteServiceRef.current.getPlacePredictions(
+        {
+          input,
+          types: ["(cities)"],
+          componentRestrictions: { country: ["id", "sg", "my", "th", "vn", "ph", "jp", "kr", "cn", "au", "in", "ae", "us", "gb", "fr"] }
+        },
+        (predictions: GooglePrediction[] | null, status: string) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setPredictions(predictions);
+          } else {
+            setPredictions([]);
+          }
+          setIsLoading(false);
+        }
+      );
+    } catch (error) {
+      console.error("Error fetching predictions:", error);
+      setPredictions([]);
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Debounced fetch
+  useEffect(() => {
+    if (!query || !useGooglePlaces) {
+      setPredictions([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchPredictions(query);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query, fetchPredictions, useGooglePlaces]);
+
+  // Filter locations from static list (fallback)
   const filteredLocations = query
     ? LOCATION_OPTIONS.filter((loc) =>
         loc.toLowerCase().includes(query.toLowerCase())
@@ -34,20 +212,56 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     setIsOpen(true);
   }, []);
 
+  // Get place details from Google Places
+  const getPlaceDetails = useCallback((placeId: string, description: string) => {
+    if (!window.google?.maps?.places?.PlacesService) {
+      onChange(description);
+      return;
+    }
+
+    const service = new window.google.maps.places.PlacesService(document.createElement("div"));
+    service.getDetails(
+      {
+        placeId,
+        fields: ["geometry", "address_components"],
+      },
+      (place: GooglePlaceDetails | null, status: string) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          const timezone = getTimezoneFromCoordinates(lat, lng);
+          onChange(description, timezone, { lat, lng });
+        } else {
+          const timezone = getTimezoneByLocation(description);
+          onChange(description, timezone);
+        }
+      }
+    );
+  }, [onChange]);
+
   // Select a location
-  const selectLocation = useCallback((location: string) => {
+  const selectLocation = useCallback((location: string, placeId?: string) => {
     setQuery(location);
     setIsOpen(false);
-    const timezone = getTimezoneByLocation(location);
-    onChange(location, timezone);
-  }, [onChange]);
+    setPredictions([]);
+
+    if (placeId && useGooglePlaces) {
+      getPlaceDetails(placeId, location);
+    } else {
+      const timezone = getTimezoneByLocation(location);
+      onChange(location, timezone);
+    }
+  }, [onChange, useGooglePlaces, getPlaceDetails]);
 
   // Clear input
   const handleClear = useCallback(() => {
     setQuery("");
     setIsOpen(false);
-    onChange("", "");
+    setPredictions([]);
+    onChange("", "", undefined);
   }, [onChange]);
+
+  const showDropdown = isOpen && (predictions.length > 0 || filteredLocations.length > 0);
 
   return (
     <div className="relative">
@@ -90,6 +304,12 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
               <X className="w-3 h-3" strokeWidth={2.5} />
             </button>
           )}
+
+          {isLoading && (
+            <div className="absolute right-10 top-1/2 -translate-y-1/2">
+              <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#94A3B8" }} strokeWidth={2} />
+            </div>
+          )}
         </div>
 
         <button
@@ -116,7 +336,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       </div>
 
       {/* Autocomplete dropdown */}
-      {isOpen && filteredLocations.length > 0 && (
+      {showDropdown && (
         <div
           className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden shadow-lg"
           style={{
@@ -126,26 +346,108 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             overflowY: "auto",
           }}
         >
-          {filteredLocations.map((location) => (
-            <button
-              key={location}
-              type="button"
-              onMouseDown={() => selectLocation(location)}
-              className="w-full px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
-            >
+          {/* Google Places predictions */}
+          {predictions.length > 0 && (
+            <>
               <div
-                className="text-sm flex items-center gap-2"
+                className="px-3 py-1.5"
                 style={{
+                  fontSize: "0.65rem",
                   fontFamily: '"Inter", sans-serif',
-                  color: "#1E293B",
-                  fontWeight: 500,
+                  fontWeight: 600,
+                  color: "#94A3B8",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  backgroundColor: "#F8FAFC",
                 }}
               >
-                <MapPin className="w-3.5 h-3.5" style={{ color: "#94A3B8" }} strokeWidth={2} />
-                {location}
+                Google Places
               </div>
-            </button>
-          ))}
+              {predictions.map((prediction) => (
+                <button
+                  key={prediction.place_id}
+                  type="button"
+                  onMouseDown={() => selectLocation(prediction.description, prediction.place_id)}
+                  className="w-full px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
+                >
+                  <div
+                    className="text-sm"
+                    style={{
+                      fontFamily: '"Inter", sans-serif',
+                      color: "#1E293B",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {prediction.structured_formatting.main_text}
+                  </div>
+                  <div
+                    className="text-xs"
+                    style={{
+                      fontFamily: '"Inter", sans-serif',
+                      color: "#94A3B8",
+                    }}
+                  >
+                    {prediction.structured_formatting.secondary_text}
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* Fallback locations */}
+          {filteredLocations.length > 0 && predictions.length > 0 && (
+            <div style={{ borderTop: "1px solid #F1F5F9" }} />
+          )}
+
+          {filteredLocations.length > 0 && (
+            <>
+              {predictions.length > 0 && (
+                <div
+                  className="px-3 py-1.5"
+                  style={{
+                    fontSize: "0.65rem",
+                    fontFamily: '"Inter", sans-serif',
+                    fontWeight: 600,
+                    color: "#94A3B8",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    backgroundColor: "#F8FAFC",
+                  }}
+                >
+                  Popular Locations
+                </div>
+              )}
+              {filteredLocations.slice(0, predictions.length > 0 ? 5 : 10).map((location) => (
+                <button
+                  key={location}
+                  type="button"
+                  onMouseDown={() => selectLocation(location)}
+                  className="w-full px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
+                >
+                  <div
+                    className="text-sm flex items-center gap-2"
+                    style={{
+                      fontFamily: '"Inter", sans-serif',
+                      color: "#1E293B",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <MapPin className="w-3.5 h-3.5" style={{ color: "#94A3B8" }} strokeWidth={2} />
+                    {location}
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
+
+          {predictions.length === 0 && filteredLocations.length === 0 && query && (
+            <div
+              className="px-3 py-4 text-center"
+              style={{ color: "#94A3B8", fontFamily: '"Inter", sans-serif', fontSize: "0.75rem" }}
+            >
+              No locations found for "{query}"
+            </div>
+          )}
         </div>
       )}
 
@@ -158,20 +460,55 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 // Location Modal Component
 interface LocationModalProps {
   onClose: () => void;
-  onSelect: (location: string) => void;
+  onSelect: (location: string, placeId?: string) => void;
 }
 
 function LocationModal({ onClose, onSelect }: LocationModalProps) {
   const [search, setSearch] = useState("");
+  const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const autocompleteServiceRef = useRef<any>(null);
+  const [useGooglePlaces, setUseGooglePlaces] = useState(false);
 
-  const filteredLocations = search
-    ? LOCATION_OPTIONS.filter((loc) =>
-        loc.toLowerCase().includes(search.toLowerCase())
-      )
-    : LOCATION_OPTIONS;
+  // Initialize autocomplete service
+  useEffect(() => {
+    if (window.google?.maps?.places) {
+      setUseGooglePlaces(true);
+      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+    }
+  }, []);
 
-  // Group by country/region
-  const groupedLocations = filteredLocations.reduce((acc, loc) => {
+  // Fetch predictions
+  useEffect(() => {
+    if (!search || !autocompleteServiceRef.current) {
+      setPredictions([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      autocompleteServiceRef.current.getPlacePredictions(
+        {
+          input: search,
+          types: ["(cities)"],
+        },
+        (predictions: GooglePrediction[] | null, status: string) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setPredictions(predictions.slice(0, 10));
+          } else {
+            setPredictions([]);
+          }
+          setIsLoading(false);
+        }
+      );
+    } catch (error) {
+      setPredictions([]);
+      setIsLoading(false);
+    }
+  }, [search]);
+
+  // Group static locations by country/region
+  const groupedLocations = LOCATION_OPTIONS.reduce((acc, loc) => {
     const country = loc.split(", ").pop() || "Other";
     if (!acc[country]) {
       acc[country] = [];
@@ -179,6 +516,34 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     acc[country].push(loc);
     return acc;
   }, {} as Record<string, string[]>);
+
+  // Get place details and select
+  const handleSelectPlace = useCallback((prediction: GooglePrediction) => {
+    if (!window.google?.maps?.places?.PlacesService) {
+      onSelect(prediction.description);
+      onClose();
+      return;
+    }
+
+    const service = new window.google.maps.places.PlacesService(document.createElement("div"));
+    service.getDetails(
+      {
+        placeId: prediction.place_id,
+        fields: ["geometry", "address_components"],
+      },
+      (place: GooglePlaceDetails | null, status: string) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          const timezone = getTimezoneFromCoordinates(lat, lng);
+          onSelect(prediction.description, prediction.place_id);
+        } else {
+          onSelect(prediction.description);
+        }
+        onClose();
+      }
+    );
+  }, [onClose, onSelect]);
 
   return (
     <div
@@ -234,7 +599,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                   fontFamily: '"Inter", sans-serif',
                 }}
               >
-                Choose from available cities
+                Search worldwide or choose from popular cities
               </p>
             </div>
           </div>
@@ -267,8 +632,8 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search locations..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none"
+              placeholder="Search any city worldwide..."
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm outline-none"
               style={{
                 border: "1.5px solid #E2E8F0",
                 backgroundColor: "#F8FAFC",
@@ -276,17 +641,92 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                 color: "#1E293B",
               }}
             />
+            {isLoading && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: "#94A3B8" }} strokeWidth={2} />
+            )}
           </div>
         </div>
 
-        {/* Location List */}
+        {/* Results */}
         <div
           className="overflow-y-auto"
           style={{ maxHeight: "calc(80vh - 140px)" }}
         >
-          {Object.entries(groupedLocations).map(([country, locations]) => (
+          {/* Google Places results */}
+          {predictions.length > 0 && (
+            <>
+              <div
+                className="px-5 py-2 sticky top-0 z-10"
+                style={{
+                  backgroundColor: "#F8FAFC",
+                  borderBottom: "1px solid #E2E8F0",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    fontFamily: '"Inter", sans-serif',
+                    fontWeight: 600,
+                    color: "#2563EB",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  Worldwide Search Results
+                </span>
+              </div>
+              {predictions.map((prediction) => (
+                <button
+                  key={prediction.place_id}
+                  type="button"
+                  onClick={() => handleSelectPlace(prediction)}
+                  className="w-full px-5 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
+                  style={{ borderBottom: "1px solid #F8FAFC" }}
+                >
+                  <div
+                    className="flex items-center justify-center rounded-full"
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      backgroundColor: "#DBEAFE",
+                      color: "#2563EB",
+                    }}
+                  >
+                    <MapPin strokeWidth={2} width={14} height={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div
+                      style={{
+                        fontSize: "0.875rem",
+                        fontFamily: '"Inter", sans-serif',
+                        fontWeight: 500,
+                        color: "#1E293B",
+                      }}
+                    >
+                      {prediction.structured_formatting.main_text}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        fontFamily: '"Inter", sans-serif',
+                        color: "#94A3B8",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {prediction.structured_formatting.secondary_text}
+                    </div>
+                  </div>
+                </button>
+              ))}
+              <div style={{ borderTop: "1px solid #E2E8F0", margin: "8px 0" }} />
+            </>
+          )}
+
+          {/* Popular locations */}
+          {!search && Object.entries(groupedLocations).map(([country, locations]) => (
             <div key={country}>
-              {/* Country Header */}
               <div
                 className="px-5 py-2 sticky top-0 z-10"
                 style={{
@@ -307,8 +747,6 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                   {country}
                 </span>
               </div>
-
-              {/* Locations */}
               {locations.map((location) => {
                 const city = location.split(", ")[0];
                 return (
@@ -360,7 +798,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
             </div>
           ))}
 
-          {filteredLocations.length === 0 && (
+          {predictions.length === 0 && search && !isLoading && (
             <div
               className="px-5 py-8 text-center"
               style={{ color: "#94A3B8", fontFamily: '"Inter", sans-serif' }}

@@ -115,10 +115,17 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
     }
   };
 
-  const handleLocationChange = (value: string, timezoneValue?: string) => {
+  const handleLocationChange = (
+    value: string,
+    timezoneValue?: string,
+    coordinates?: { lat: number; lng: number }
+  ) => {
     setLocation(value);
     if (timezoneValue) {
       setTimezone(timezoneValue);
+    }
+    if (coordinates) {
+      console.log("Location coordinates:", coordinates);
     }
   };
 
