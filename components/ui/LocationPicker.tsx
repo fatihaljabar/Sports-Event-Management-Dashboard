@@ -530,12 +530,20 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
       try {
         const map = new window.google.maps.Map(mapRef.current, {
           center: { lat: -6.2088, lng: 106.8456 }, // Jakarta default
-          zoom: 11,
+          zoom: 13,
           styles: [
             { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "on" }] },
             { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
             { featureType: "administrative.neighborhood", stylers: [{ visibility: "off" }] },
-            { featureType: "poi", stylers: [{ visibility: "off" }] },
+            // Show POIs with labels
+            { featureType: "poi", elementType: "all", stylers: [{ visibility: "on" }] },
+            { featureType: "poi", elementType: "labels.text", stylers: [{ visibility: "on" }] },
+            { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#333333" }] },
+            { featureType: "poi", elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+            // Show POI icons for sports venues
+            { featureType: "poi.sports_complex", stylers: [{ visibility: "on" }] },
+            { featureType: "poi.stadium", stylers: [{ visibility: "on" }] },
+            { featureType: "poi.gym", stylers: [{ visibility: "on" }] },
             { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
             { featureType: "road", elementType: "geometry", stylers: [{ visibility: "simplified" }] },
             { featureType: "water", stylers: [{ color: "#aadaff" }] },
