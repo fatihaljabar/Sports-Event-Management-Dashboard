@@ -90,12 +90,6 @@ function loadGooglePlacesScript(callback: () => void) {
 }
 
 function getTimezoneFromCoordinates(lat: number, lng: number): string {
-  // Rough timezone estimation based on longitude
-  // Each 15 degrees = 1 hour timezone
-  const offset = Math.round(lng / 15);
-  const hours = Math.abs(offset);
-  const sign = offset >= 0 ? "+" : "-";
-
   // Indonesia timezones approximation
   if (lng >= 95 && lng <= 141) {
     if (lat >= -11 && lat <= -6) return "Asia/Makassar"; // WITA
@@ -104,25 +98,16 @@ function getTimezoneFromCoordinates(lat: number, lng: number): string {
   }
 
   // Major cities timezones
-  const majorTimezones: Record<string, string> = {
-    "Jakarta": "Asia/Jakarta",
-    "Singapore": "Asia/Singapore",
-    "Bangkok": "Asia/Bangkok",
-    "Kuala Lumpur": "Asia/Kuala_Lumpur",
-    "Manila": "Asia/Manila",
-    "Tokyo": "Asia/Tokyo",
-    "Seoul": "Asia/Seoul",
-    "Beijing": "Asia/Shanghai",
-    "Sydney": "Australia/Sydney",
-    "Delhi": "Asia/Kolkata",
-    "Dubai": "Asia/Dubai",
-    "London": "Europe/London",
-    "Paris": "Europe/Paris",
-    "New York": "America/New_York",
-    "Los Angeles": "America/Los_Angeles",
-  };
+  if (lng >= 138 && lng <= 141 && lat >= 34 && lat <= 37) return "Asia/Tokyo";
+  if (lng >= 126 && lng <= 130 && lat >= 33 && lat <= 38) return "Asia/Seoul";
+  if (lng >= 116 && lng <= 120 && lat >= 39 && lat <= 41) return "Asia/Shanghai";
+  if (lng >= 103 && lng <= 107 && lat >= 1 && lat <= 6) return "Asia/Bangkok";
+  if (lng >= 100 && lng <= 104 && lat >= 13 && lat <= 18) return "Asia/Kuala_Lumpur";
+  if (lng >= 103 && lng <= 105 && lat >= -1 && lat <= 2) return "Asia/Singapore";
+  if (lng >= 120 && lng <= 125 && lat >= 13 && lat <= 16) return "Asia/Manila";
+  if (lng >= 115 && lng <= 120 && lat >= -5 && lat <= 0) return "Asia/Jakarta";
 
-  return `UTC${sign}${String(hours).padStart(2, '0')}:00`;
+  return "Asia/Jakarta"; // Default
 }
 
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
@@ -131,7 +116,6 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const [showMapModal, setShowMapModal] = useState(false);
   const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [useGooglePlaces, setUseGooglePlaces] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteServiceRef = useRef<any>(null);
 
@@ -141,7 +125,6 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     if (apiKey) {
       loadGooglePlacesScript(() => {
         if (window.google?.maps?.places) {
-          setUseGooglePlaces(true);
           autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
         }
       });
@@ -166,7 +149,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         {
           input,
           types: ["(cities)"],
-          componentRestrictions: { country: ["id", "sg", "my", "th", "vn", "ph", "jp", "kr", "cn", "au", "in", "ae", "us", "gb", "fr"] }
+          componentRestrictions: { country: ["id", "sg", "my", "th", "vn", "ph", "jp", "kr", "cn", "au", "in", "ae", "us", "gb", "fr", "de", "nl", "es", "it"] }
         },
         (predictions: GooglePrediction[] | null, status: string) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -186,7 +169,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
   // Debounced fetch
   useEffect(() => {
-    if (!query || !useGooglePlaces) {
+    if (!query || !autocompleteServiceRef.current) {
       setPredictions([]);
       return;
     }
@@ -196,7 +179,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query, fetchPredictions, useGooglePlaces]);
+  }, [query, fetchPredictions]);
 
   // Filter locations from static list (fallback)
   const filteredLocations = query
@@ -245,13 +228,13 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     setIsOpen(false);
     setPredictions([]);
 
-    if (placeId && useGooglePlaces) {
+    if (placeId) {
       getPlaceDetails(placeId, location);
     } else {
       const timezone = getTimezoneByLocation(location);
       onChange(location, timezone);
     }
-  }, [onChange, useGooglePlaces, getPlaceDetails]);
+  }, [onChange, getPlaceDetails]);
 
   // Clear input
   const handleClear = useCallback(() => {
@@ -468,17 +451,28 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const autocompleteServiceRef = useRef<any>(null);
-  const [useGooglePlaces, setUseGooglePlaces] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [hasGooglePlaces, setHasGooglePlaces] = useState(false);
 
-  // Initialize autocomplete service
+  // Load Google Places script when modal opens
   useEffect(() => {
-    if (window.google?.maps?.places) {
-      setUseGooglePlaces(true);
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (apiKey && !window.google?.maps?.places) {
+      loadGooglePlacesScript(() => {
+        if (window.google?.maps?.places) {
+          setHasGooglePlaces(true);
+          setScriptLoaded(true);
+          autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+        }
+      });
+    } else if (window.google?.maps?.places) {
+      setHasGooglePlaces(true);
+      setScriptLoaded(true);
       autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
     }
   }, []);
 
-  // Fetch predictions
+  // Fetch predictions (worldwide search, no country restriction)
   useEffect(() => {
     if (!search || !autocompleteServiceRef.current) {
       setPredictions([]);
@@ -491,6 +485,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
         {
           input: search,
           types: ["(cities)"],
+          // No country restrictions for worldwide search
         },
         (predictions: GooglePrediction[] | null, status: string) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -599,7 +594,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                   fontFamily: '"Inter", sans-serif',
                 }}
               >
-                Search worldwide or choose from popular cities
+                {hasGooglePlaces ? "Search worldwide or choose from popular cities" : "Loading location services..."}
               </p>
             </div>
           </div>
@@ -632,13 +627,14 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search any city worldwide..."
+              placeholder={hasGooglePlaces ? "Search any city worldwide..." : "Search cities..."}
+              disabled={!hasGooglePlaces && !scriptLoaded}
               className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm outline-none"
               style={{
                 border: "1.5px solid #E2E8F0",
-                backgroundColor: "#F8FAFC",
+                backgroundColor: hasGooglePlaces ? "#F8FAFC" : "#F1F5F9",
                 fontFamily: '"Inter", sans-serif',
-                color: "#1E293B",
+                color: hasGooglePlaces ? "#1E293B" : "#94A3B8",
               }}
             />
             {isLoading && (
@@ -724,8 +720,8 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
             </>
           )}
 
-          {/* Popular locations */}
-          {!search && Object.entries(groupedLocations).map(([country, locations]) => (
+          {/* Popular locations - only show when not searching or no results */}
+          {(predictions.length === 0 || !search) && Object.entries(groupedLocations).map(([country, locations]) => (
             <div key={country}>
               <div
                 className="px-5 py-2 sticky top-0 z-10"
