@@ -535,15 +535,11 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
             { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "on" }] },
             { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
             { featureType: "administrative.neighborhood", stylers: [{ visibility: "off" }] },
-            // Show POIs with labels
+            // Show POIs with labels (all types including stadiums, gyms, etc.)
             { featureType: "poi", elementType: "all", stylers: [{ visibility: "on" }] },
             { featureType: "poi", elementType: "labels.text", stylers: [{ visibility: "on" }] },
             { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#333333" }] },
             { featureType: "poi", elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
-            // Show POI icons for sports venues
-            { featureType: "poi.sports_complex", stylers: [{ visibility: "on" }] },
-            { featureType: "poi.stadium", stylers: [{ visibility: "on" }] },
-            { featureType: "poi.gym", stylers: [{ visibility: "on" }] },
             { featureType: "road", elementType: "labels", stylers: [{ visibility: "off" }] },
             { featureType: "road", elementType: "geometry", stylers: [{ visibility: "simplified" }] },
             { featureType: "water", stylers: [{ color: "#aadaff" }] },
