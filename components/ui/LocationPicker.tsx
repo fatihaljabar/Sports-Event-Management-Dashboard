@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { MapPin, X, Search, Loader2 } from "lucide-react";
-import { LOCATION_OPTIONS, getTimezoneByLocation } from "@/lib/constants/locations";
+import { getTimezoneByLocation } from "@/lib/constants/locations";
 
 interface LocationPickerProps {
   value: string;
@@ -181,13 +181,6 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     return () => clearTimeout(timer);
   }, [query, fetchPredictions]);
 
-  // Filter locations from static list (fallback)
-  const filteredLocations = query
-    ? LOCATION_OPTIONS.filter((loc) =>
-        loc.toLowerCase().includes(query.toLowerCase())
-      )
-    : LOCATION_OPTIONS;
-
   // Handle input change
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -244,7 +237,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     onChange("", "", undefined);
   }, [onChange]);
 
-  const showDropdown = isOpen && (predictions.length > 0 || filteredLocations.length > 0);
+  const showDropdown = isOpen && predictions.length > 0;
 
   return (
     <div className="relative">
@@ -377,53 +370,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             </>
           )}
 
-          {/* Fallback locations */}
-          {filteredLocations.length > 0 && predictions.length > 0 && (
-            <div style={{ borderTop: "1px solid #F1F5F9" }} />
-          )}
-
-          {filteredLocations.length > 0 && (
-            <>
-              {predictions.length > 0 && (
-                <div
-                  className="px-3 py-1.5"
-                  style={{
-                    fontSize: "0.65rem",
-                    fontFamily: '"Inter", sans-serif',
-                    fontWeight: 600,
-                    color: "#94A3B8",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    backgroundColor: "#F8FAFC",
-                  }}
-                >
-                  Popular Locations
-                </div>
-              )}
-              {filteredLocations.slice(0, predictions.length > 0 ? 5 : 10).map((location) => (
-                <button
-                  key={location}
-                  type="button"
-                  onMouseDown={() => selectLocation(location)}
-                  className="w-full px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
-                >
-                  <div
-                    className="text-sm flex items-center gap-2"
-                    style={{
-                      fontFamily: '"Inter", sans-serif',
-                      color: "#1E293B",
-                      fontWeight: 500,
-                    }}
-                  >
-                    <MapPin className="w-3.5 h-3.5" style={{ color: "#94A3B8" }} strokeWidth={2} />
-                    {location}
-                  </div>
-                </button>
-              ))}
-            </>
-          )}
-
-          {predictions.length === 0 && filteredLocations.length === 0 && query && (
+          {predictions.length === 0 && query && isLoading === false && (
             <div
               className="px-3 py-4 text-center"
               style={{ color: "#94A3B8", fontFamily: '"Inter", sans-serif', fontSize: "0.75rem" }}
