@@ -502,16 +502,6 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     }
   }, [search]);
 
-  // Group static locations by country/region
-  const groupedLocations = LOCATION_OPTIONS.reduce((acc, loc) => {
-    const country = loc.split(", ").pop() || "Other";
-    if (!acc[country]) {
-      acc[country] = [];
-    }
-    acc[country].push(loc);
-    return acc;
-  }, {} as Record<string, string[]>);
-
   // Get place details and select
   const handleSelectPlace = useCallback((prediction: GooglePrediction) => {
     if (!window.google?.maps?.places?.PlacesService) {
@@ -720,86 +710,29 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
             </>
           )}
 
-          {/* Popular locations - only show when not searching or no results */}
-          {(predictions.length === 0 || !search) && Object.entries(groupedLocations).map(([country, locations]) => (
-            <div key={country}>
-              <div
-                className="px-5 py-2 sticky top-0 z-10"
-                style={{
-                  backgroundColor: "#F8FAFC",
-                  borderBottom: "1px solid #F1F5F9",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.7rem",
-                    fontFamily: '"Inter", sans-serif',
-                    fontWeight: 600,
-                    color: "#64748B",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  {country}
-                </span>
-              </div>
-              {locations.map((location) => {
-                const city = location.split(", ")[0];
-                return (
-                  <button
-                    key={location}
-                    type="button"
-                    onClick={() => {
-                      onSelect(location);
-                      onClose();
-                    }}
-                    className="w-full px-5 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
-                    style={{ borderBottom: "1px solid #F8FAFC" }}
-                  >
-                    <div
-                      className="flex items-center justify-center rounded-full"
-                      style={{
-                        width: "28px",
-                        height: "28px",
-                        backgroundColor: "#EFF6FF",
-                        color: "#2563EB",
-                      }}
-                    >
-                      <MapPin strokeWidth={2} width={14} height={14} />
-                    </div>
-                    <div className="flex-1">
-                      <div
-                        style={{
-                          fontSize: "0.875rem",
-                          fontFamily: '"Inter", sans-serif',
-                          fontWeight: 500,
-                          color: "#1E293B",
-                        }}
-                      >
-                        {city}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.7rem",
-                          fontFamily: '"Inter", sans-serif',
-                          color: "#94A3B8",
-                        }}
-                      >
-                        {location}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-
+          {/* No results state */}
           {predictions.length === 0 && search && !isLoading && (
             <div
               className="px-5 py-8 text-center"
               style={{ color: "#94A3B8", fontFamily: '"Inter", sans-serif' }}
             >
               No locations found for "{search}"
+            </div>
+          )}
+
+          {/* Empty state when no search */}
+          {predictions.length === 0 && !search && !isLoading && (
+            <div
+              className="px-5 py-12 text-center flex flex-col items-center gap-3"
+              style={{ color: "#94A3B8" }}
+            >
+              <MapPin className="w-12 h-12" strokeWidth={1.5} style={{ color: "#CBD5E1" }} />
+              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.875rem" }}>
+                Start typing to search for cities worldwide
+              </div>
+              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.75rem", color: "#64748B" }}>
+                Powered by Google Places
+              </div>
             </div>
           )}
         </div>
