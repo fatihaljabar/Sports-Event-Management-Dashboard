@@ -805,7 +805,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
 
         {/* Map Container */}
         {!isInitializing && !initError && (
-          <div style={{ height: "280px", position: "relative" }}>
+          <div style={{ height: "400px", position: "relative" }}>
             <div
               ref={mapRef}
               style={{ width: "100%", height: "100%" }}
@@ -832,132 +832,80 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           </div>
         )}
 
-        {/* Search Results Panel */}
-        <div
-          className="overflow-y-auto"
-          style={{ maxHeight: predictions.length > 0 ? "200px" : "150px" }}
-        >
-          {/* Initializing state */}
-          {isInitializing && (
-            <div className="px-5 py-12 text-center flex flex-col items-center gap-3">
-              <Loader2 className="w-10 h-10 animate-spin" style={{ color: "#2563EB" }} strokeWidth={2} />
-              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.875rem", color: "#64748B" }}>
-                Loading Google Places API...
-              </div>
-            </div>
-          )}
-
-          {/* Error state */}
-          {initError && !isInitializing && (
-            <div className="px-5 py-12 text-center flex flex-col items-center gap-3">
-              <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "#FEF2F2", color: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <X className="w-6 h-6" strokeWidth={2} />
-              </div>
-              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.875rem", color: "#DC2626" }}>
-                {initError}
-              </div>
-              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.75rem", color: "#64748B" }}>
-                Please check your API key configuration
-              </div>
-            </div>
-          )}
-
-          {/* Google Places results */}
-          {predictions.length > 0 && (
-            <>
-              <div
-                className="px-5 py-2 sticky top-0 z-10"
+        {/* Search Results Panel - only show when there are predictions */}
+        {predictions.length > 0 && (
+          <div
+            className="overflow-y-auto"
+            style={{ maxHeight: "200px" }}
+          >
+            <div
+              className="px-5 py-2 sticky top-0 z-10"
+              style={{
+                backgroundColor: "#F8FAFC",
+                borderBottom: "1px solid #E2E8F0",
+              }}
+            >
+              <span
                 style={{
-                  backgroundColor: "#F8FAFC",
-                  borderBottom: "1px solid #E2E8F0",
+                  fontSize: "0.7rem",
+                  fontFamily: '"Inter", sans-serif',
+                  fontWeight: 600,
+                  color: "#2563EB",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
                 }}
               >
-                <span
+                Worldwide Search Results
+              </span>
+            </div>
+            {predictions.map((prediction) => (
+              <button
+                key={prediction.place_id}
+                type="button"
+                onClick={() => handleSelectPlace(prediction)}
+                onMouseEnter={() => handlePredictionHover(prediction)}
+                className="w-full px-5 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
+                style={{ borderBottom: "1px solid #F8FAFC" }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full"
                   style={{
-                    fontSize: "0.7rem",
-                    fontFamily: '"Inter", sans-serif',
-                    fontWeight: 600,
+                    width: "28px",
+                    height: "28px",
+                    backgroundColor: "#DBEAFE",
                     color: "#2563EB",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
                   }}
                 >
-                  Worldwide Search Results
-                </span>
-              </div>
-              {predictions.map((prediction) => (
-                <button
-                  key={prediction.place_id}
-                  type="button"
-                  onClick={() => handleSelectPlace(prediction)}
-                  onMouseEnter={() => handlePredictionHover(prediction)}
-                  className="w-full px-5 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
-                  style={{ borderBottom: "1px solid #F8FAFC" }}
-                >
+                  <MapPin strokeWidth={2} width={14} height={14} />
+                </div>
+                <div className="flex-1 min-w-0">
                   <div
-                    className="flex items-center justify-center rounded-full"
                     style={{
-                      width: "28px",
-                      height: "28px",
-                      backgroundColor: "#DBEAFE",
-                      color: "#2563EB",
+                      fontSize: "0.875rem",
+                      fontFamily: '"Inter", sans-serif',
+                      fontWeight: 500,
+                      color: "#1E293B",
                     }}
                   >
-                    <MapPin strokeWidth={2} width={14} height={14} />
+                    {prediction.structured_formatting.main_text}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div
-                      style={{
-                        fontSize: "0.875rem",
-                        fontFamily: '"Inter", sans-serif',
-                        fontWeight: 500,
-                        color: "#1E293B",
-                      }}
-                    >
-                      {prediction.structured_formatting.main_text}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "0.7rem",
-                        fontFamily: '"Inter", sans-serif',
-                        color: "#94A3B8",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {prediction.structured_formatting.secondary_text}
-                    </div>
+                  <div
+                    style={{
+                      fontSize: "0.7rem",
+                      fontFamily: '"Inter", sans-serif',
+                      color: "#94A3B8",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {prediction.structured_formatting.secondary_text}
                   </div>
-                </button>
-              ))}
-              <div style={{ borderTop: "1px solid #E2E8F0", margin: "8px 0" }} />
-            </>
-          )}
-
-          {/* No results state */}
-          {predictions.length === 0 && search && !isLoading && !isInitializing && !initError && (
-            <div
-              className="px-5 py-8 text-center"
-              style={{ color: "#94A3B8", fontFamily: '"Inter", sans-serif' }}
-            >
-              No locations found for "{search}"
-            </div>
-          )}
-
-          {/* Empty state when no search */}
-          {predictions.length === 0 && !search && !isLoading && !isInitializing && !initError && (
-            <div
-              className="px-5 py-8 text-center flex flex-col items-center gap-2"
-              style={{ color: "#94A3B8" }}
-            >
-              <MapPin className="w-10 h-10" strokeWidth={1.5} style={{ color: "#CBD5E1" }} />
-              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.8rem" }}>
-                Search for a city or click on the map
-              </div>
-            </div>
-          )}
-        </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Footer Actions */}
         {!isInitializing && !initError && (
