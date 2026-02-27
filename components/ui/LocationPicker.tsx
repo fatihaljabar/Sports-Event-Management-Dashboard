@@ -93,6 +93,7 @@ function loadGooglePlacesScript(callback: () => void) {
 async function getTimezoneFromCoordinates(lat: number, lng: number): Promise<string> {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
   if (!apiKey) {
+    console.warn("[Timezone API] No API key found, using fallback");
     return "Asia/Jakarta"; // Default fallback
   }
 
@@ -103,15 +104,22 @@ async function getTimezoneFromCoordinates(lat: number, lng: number): Promise<str
     const response = await fetch(url);
     const data = await response.json();
 
+    console.log("[Timezone API] Response:", data);
+
     if (data.status === "OK" && data.timeZoneId) {
+      console.log("[Timezone API] Detected timezone:", data.timeZoneId, "for coords:", { lat, lng });
       return data.timeZoneId;
+    } else {
+      console.warn("[Timezone API] Status not OK:", data.status, data);
     }
   } catch (error) {
     console.error("[Timezone API] Error fetching timezone:", error);
   }
 
   // Fallback to approximation if API fails
-  return getTimezoneByLocationFallback(lat, lng);
+  const fallback = getTimezoneByLocationFallback(lat, lng);
+  console.log("[Timezone API] Using fallback timezone:", fallback);
+  return fallback;
 }
 
 // Fallback timezone approximation (used when API fails)
@@ -232,9 +240,11 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
           const timezone = await getTimezoneFromCoordinates(lat, lng);
+          console.log("[LocationPicker] Calling onChange with timezone:", timezone);
           onChange(description, timezone, { lat, lng });
         } else {
           const timezone = getTimezoneByLocation(description);
+          console.log("[LocationPicker] Calling onChange with fallback timezone:", timezone);
           onChange(description, timezone);
         }
       }
@@ -243,6 +253,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
   // Select a location
   const selectLocation = useCallback(async (location: string, placeId?: string, coordinates?: { lat: number; lng: number }) => {
+    console.log("[LocationPicker] selectLocation called with:", { location, placeId, coordinates });
     setQuery(location);
     setIsOpen(false);
     setPredictions([]);
@@ -250,11 +261,13 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     if (coordinates) {
       // Fetch timezone using coordinates
       const timezone = await getTimezoneFromCoordinates(coordinates.lat, coordinates.lng);
+      console.log("[LocationPicker] Calling onChange from selectLocation with timezone:", timezone);
       onChange(location, timezone, coordinates);
     } else if (placeId) {
       getPlaceDetails(placeId, location);
     } else {
       const timezone = getTimezoneByLocation(location);
+      console.log("[LocationPicker] Calling onChange with name-only timezone:", timezone);
       onChange(location, timezone);
     }
   }, [onChange, getPlaceDetails]);
@@ -680,7 +693,9 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
 
   // Confirm selection and close
   const handleConfirmSelection = useCallback(async () => {
+    console.log("[LocationModal] Confirm selection called with:", selectedLocation);
     if (selectedLocation) {
+      console.log("[LocationModal] Passing to onSelect with coords:", { lat: selectedLocation.lat, lng: selectedLocation.lng });
       // Pass coordinates for timezone detection
       onSelect(selectedLocation.name, undefined, { lat: selectedLocation.lat, lng: selectedLocation.lng });
     }

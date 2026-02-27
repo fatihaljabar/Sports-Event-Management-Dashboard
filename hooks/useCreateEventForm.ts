@@ -82,17 +82,20 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     timezoneFromPicker?: string,
     coordinates?: { lat: number; lng: number }
   ) => {
+    console.log("[useCreateEventForm] handleLocationChange called:", { value, timezoneFromPicker, coordinates });
     setLocation(value);
     // Use timezone from picker if provided, otherwise fallback to detection
     if (timezoneFromPicker) {
+      console.log("[useCreateEventForm] Setting timezone from picker:", timezoneFromPicker);
       setTimezone(timezoneFromPicker);
     } else {
       const detectedTimezone = getTimezoneByLocation(value);
+      console.log("[useCreateEventForm] Setting timezone from detection:", detectedTimezone);
       setTimezone(detectedTimezone);
     }
     // Coordinates could be stored for future map features
     if (coordinates) {
-      console.log("Location coordinates:", coordinates);
+      console.log("[useCreateEventForm] Location coordinates:", coordinates);
     }
   }, []);
 
