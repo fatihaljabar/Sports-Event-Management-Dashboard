@@ -80,7 +80,7 @@ export function TimezoneAlert({ timezone }: TimezoneAlertProps) {
 
   return (
     <div
-      className="flex items-start gap-2.5 rounded-xl px-3 py-2.5"
+      className="flex items-start gap-2.5 rounded-xl px-3 py-2.5 mt-2"
       style={{
         backgroundColor: "#F0FDF4",
         border: "1px solid #BBF7D0",
