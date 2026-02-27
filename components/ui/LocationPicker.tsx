@@ -63,7 +63,7 @@ function loadGooglePlacesScript(callback: () => void) {
 
   isGoogleScriptLoading = true;
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
   if (!apiKey) {
     console.warn("Google Maps API key not found");
     isGoogleScriptLoading = false;
@@ -121,7 +121,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
   // Load Google Places API on mount
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
     if (apiKey) {
       loadGooglePlacesScript(() => {
         if (window.google?.maps?.places) {
@@ -457,7 +457,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
 
   // Load Google Places script when modal opens
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
     // Debug: log API key presence
     console.log("[LocationModal] API Key exists:", !!apiKey);
