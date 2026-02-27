@@ -10,6 +10,7 @@ import { SportMultiSelect } from "@/components/ui/SportMultiSelect";
 import { EventTypeSelector } from "@/components/ui/EventTypeSelector";
 import { SponsorLogosUploader } from "@/components/ui/SponsorLogosUploader";
 import { EventFormActions } from "@/components/ui/EventFormActions";
+import { TimezoneAlert } from "@/components/ui/TimezoneAlert";
 import { CreateEventStepper } from "@/components/ui/CreateEventStepper";
 import { LocationPicker } from "@/components/ui/LocationPicker";
 
@@ -298,6 +299,8 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
                   placeholder="Auto-detected from location"
                   disabled
                 />
+                {/* Dynamic timezone alert */}
+                {timezone && <TimezoneAlert timezone={timezone} />}
               </div>
 
               {/* Participant Quota */}

@@ -11,6 +11,7 @@ import { EventTypeSelector } from "@/components/ui/EventTypeSelector";
 import { SponsorLogosUploader } from "@/components/ui/SponsorLogosUploader";
 import { EventFormActions } from "@/components/ui/EventFormActions";
 import { LocationPicker } from "@/components/ui/LocationPicker";
+import { TimezoneAlert } from "@/components/ui/TimezoneAlert";
 import { updateEvent } from "@/app/actions/events";
 import { toast } from "sonner";
 import type { SportEvent as ApiSportEvent, SportCategory } from "@/lib/types/event";
@@ -445,6 +446,8 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
                   placeholder="Auto-detected from location"
                   disabled
                 />
+                {/* Dynamic timezone alert */}
+                {timezone && <TimezoneAlert timezone={timezone} />}
               </div>
 
               {/* Participant Quota */}
