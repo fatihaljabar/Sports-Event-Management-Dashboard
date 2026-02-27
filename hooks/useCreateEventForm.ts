@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useEvents } from "@/lib/stores/event-store";
-import type { SportEvent } from "@/lib/types/event";
 import { calculateTotalKeys, getTimezoneByLocation, getSportsByIds } from "@/lib/utils/create-event-helpers";
 import { validateCreateEventData, clearError } from "@/lib/utils/create-event-validation";
 import { createEvent } from "@/app/actions/events";

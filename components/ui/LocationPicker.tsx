@@ -605,7 +605,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           setIsLoading(false);
         }
       );
-    } catch (error) {
+    } catch {
       setPredictions([]);
       setIsLoading(false);
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trophy, X, Calendar, Users, Globe, AlertCircle, ImagePlus } from "lucide-react";
+import { Trophy, X, Calendar, Users, Globe, ImagePlus } from "lucide-react";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { StyledInput } from "@/components/ui/StyledInput";
 import { SectionDivider } from "@/components/ui/SectionDivider";
@@ -163,17 +163,6 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
     // Format could be "Jakarta, Indonesia" or "Jakarta, Gelora Bung Karno Stadium"
     const locationParts = location.split(',').map(p => p.trim());
     const locationCity = locationParts[0] || location;
-    // If there are more parts, check if the last part is a country or a venue
-    let locationVenue = "";
-    if (locationParts.length > 1) {
-      // Check if last part is a country name (has multiple words or is common country)
-      const commonCountries = ["Indonesia", "Malaysia", "Singapore", "Thailand", "Vietnam", "Philippines", "Japan", "South Korea", "China", "India", "Australia", "USA", "UK", "United States", "United Kingdom"];
-      const lastPart = locationParts[locationParts.length - 1];
-      if (!commonCountries.includes(lastPart)) {
-        // Last part is likely a venue, second to last might be city
-        locationVenue = locationParts.slice(1).join(', ');
-      }
-    }
 
     setIsSubmitting(true);
     try {
@@ -191,7 +180,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
         visibility,
         logoBase64: eventLogo?.preview && !keepExistingLogo ? eventLogo.preview : undefined,
         logoFileName: eventLogo?.name,
-        sponsorLogos: keepExistingSponsors ? [] : sponsorLogos.map((l, i) => ({
+        sponsorLogos: keepExistingSponsors ? [] : sponsorLogos.map((l) => ({
           name: l.name,
           base64: l.preview || "",
           fileName: l.name,
