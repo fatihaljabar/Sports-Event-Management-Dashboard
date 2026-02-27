@@ -148,7 +148,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       autocompleteServiceRef.current.getPlacePredictions(
         {
           input,
-          types: ["(cities)"],
+          // No types restriction - allows searching for all places including stadiums, venues, addresses, etc.
           componentRestrictions: { country: ["id", "sg", "my", "th", "vn", "ph", "jp", "kr", "cn", "au", "in", "ae", "us", "gb", "fr", "de", "nl", "es", "it"] }
         },
         (predictions: GooglePrediction[] | null, status: string) => {
@@ -408,6 +408,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   const markerRef = useRef<any>(null);
   const geocoderRef = useRef<any>(null);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const [hasSelectedResult, setHasSelectedResult] = useState(false); // Track if user has clicked a result
 
   // Load Google Places script when modal opens
   useEffect(() => {
@@ -558,8 +559,10 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     mapInstanceRef.current.panTo({ lat, lng });
   };
 
-  // Pan map to location when prediction is hovered
+  // Pan map to location when prediction is hovered (only active before user clicks a result)
   const handlePredictionHover = (prediction: GooglePrediction) => {
+    // Disable hover preview after user has clicked a result
+    if (hasSelectedResult) return;
     if (!window.google?.maps?.places?.PlacesService || !mapInstanceRef.current) return;
 
     const service = new window.google.maps.places.PlacesService(document.createElement("div"));
@@ -583,13 +586,15 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
       return;
     }
 
+    // Re-enable hover preview when user starts a new search
+    setHasSelectedResult(false);
+
     setIsLoading(true);
     try {
       autocompleteServiceRef.current.getPlacePredictions(
         {
           input: search,
-          types: ["(cities)"],
-          // No country restrictions for worldwide search
+          // No types restriction - allows searching for all places including stadiums, venues, addresses, etc.
         },
         (predictions: GooglePrediction[] | null, status: string) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -608,6 +613,9 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
 
   // Get place details and select
   const handleSelectPlace = useCallback((prediction: GooglePrediction) => {
+    // Mark that user has clicked a result - disable hover preview
+    setHasSelectedResult(true);
+
     if (!window.google?.maps?.places?.PlacesService) {
       onSelect(prediction.description);
       onClose();
@@ -624,7 +632,6 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
-          const timezone = getTimezoneFromCoordinates(lat, lng);
 
           // Update map marker and center
           updateMarker(lat, lng);
@@ -655,7 +662,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
       onClick={onClose}
     >
       <div
-        className="relative rounded-2xl overflow-hidden"
+        className="relative rounded-2xl overflow-hidden flex flex-col"
         style={{
           width: "100%",
           maxWidth: "800px",
@@ -738,9 +745,9 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={isInitializing ? "Loading..." : initError ? "Error loading service" : "Search any city worldwide..."}
+              placeholder={isInitializing ? "Loading..." : initError ? "Error loading service" : "Search any place worldwide..."}
               disabled={isInitializing || initError !== null}
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm outline-none"
+              className="w-full pl-10 pr-20 py-2.5 rounded-xl text-sm outline-none"
               style={{
                 border: "1.5px solid #E2E8F0",
                 backgroundColor: (hasGooglePlaces && !isInitializing) ? "#F8FAFC" : "#F1F5F9",
@@ -748,73 +755,121 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                 color: (hasGooglePlaces && !isInitializing) ? "#1E293B" : "#94A3B8",
               }}
             />
-            {isLoading && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: "#94A3B8" }} strokeWidth={2} />
-            )}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setPredictions([]);
+                    setHasSelectedResult(false); // Re-enable hover preview
+                    setSelectedLocation(null); // Clear selected location card
+                  }}
+                  className="flex items-center justify-center rounded-full transition-colors"
+                  style={{ width: "18px", height: "18px", backgroundColor: "#F1F5F9", color: "#64748B" }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#E2E8F0";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F1F5F9";
+                  }}
+                >
+                  <X className="w-3 h-3" strokeWidth={2.5} />
+                </button>
+              )}
+              {isLoading && (
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#94A3B8" }} strokeWidth={2} />
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Map Container */}
-        {!isInitializing && !initError && (
-          <div style={{ height: "400px", position: "relative" }}>
-            <div
-              ref={mapRef}
-              style={{ width: "100%", height: "100%" }}
-            />
-            {/* Selected location overlay */}
-            {selectedLocation && (
+        {/* Scrollable Content Area - Map + Search Results */}
+        <div className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
+          {/* Map Container */}
+          {!isInitializing && !initError && (
+            <div style={{ height: "320px", position: "relative", flexShrink: 0 }}>
               <div
-                className="absolute bottom-3 left-3 right-3 rounded-xl px-3 py-2"
-                style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  backdropFilter: "blur(8px)",
-                  boxShadow: "0px 4px 16px rgba(0,0,0,0.12)",
-                  border: "1px solid #E2E8F0",
-                }}
-              >
-                <div style={{ fontSize: "0.75rem", color: "#64748B", fontFamily: '"Inter", sans-serif' }}>
-                  Selected Location
+                ref={mapRef}
+                style={{ width: "100%", height: "100%" }}
+              />
+              {/* Selected location overlay */}
+              {selectedLocation && (
+                <div
+                  className="absolute bottom-3 left-3 right-3 rounded-xl px-3 py-2"
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    backdropFilter: "blur(8px)",
+                    boxShadow: "0px 4px 16px rgba(0,0,0,0.12)",
+                    border: "1px solid #E2E8F0",
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div style={{ fontSize: "0.75rem", color: "#64748B", fontFamily: '"Inter", sans-serif' }}>
+                        Selected Location
+                      </div>
+                      <div style={{ fontSize: "0.875rem", color: "#1E293B", fontFamily: '"Inter", sans-serif', fontWeight: 500 }}>
+                        {selectedLocation.name}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLocation(null);
+                        setHasSelectedResult(false); // Re-enable hover preview
+                      }}
+                      className="flex items-center justify-center rounded-full transition-colors flex-shrink-0"
+                      style={{ width: "20px", height: "20px", backgroundColor: "#F1F5F9", color: "#64748B" }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#E2E8F0";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F1F5F9";
+                      }}
+                    >
+                      <X className="w-3 h-3" strokeWidth={2.5} />
+                    </button>
+                  </div>
                 </div>
-                <div style={{ fontSize: "0.875rem", color: "#1E293B", fontFamily: '"Inter", sans-serif', fontWeight: 500 }}>
-                  {selectedLocation.name}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
-        {/* Search Results Panel - only show when there are predictions */}
-        {predictions.length > 0 && (
+        {/* Search Results Panel */}
+        {search && (
           <div
             className="overflow-y-auto"
-            style={{ maxHeight: "200px" }}
+            style={{ height: "180px" }}
           >
-            <div
-              className="px-5 py-2 sticky top-0 z-10"
-              style={{
-                backgroundColor: "#F8FAFC",
-                borderBottom: "1px solid #E2E8F0",
-              }}
-            >
-              <span
+            {predictions.length > 0 && (
+              <div
+                className="px-5 py-2 sticky top-0 z-10"
                 style={{
-                  fontSize: "0.7rem",
-                  fontFamily: '"Inter", sans-serif',
-                  fontWeight: 600,
-                  color: "#2563EB",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
+                  backgroundColor: "#F8FAFC",
+                  borderBottom: "1px solid #E2E8F0",
                 }}
               >
-                Worldwide Search Results
-              </span>
-            </div>
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    fontFamily: '"Inter", sans-serif',
+                    fontWeight: 600,
+                    color: "#2563EB",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  Worldwide Search Results
+                </span>
+              </div>
+            )}
             {predictions.map((prediction) => (
               <button
                 key={prediction.place_id}
                 type="button"
                 onClick={() => handleSelectPlace(prediction)}
-                onMouseEnter={() => handlePredictionHover(prediction)}
+                onMouseEnter={!hasSelectedResult ? () => handlePredictionHover(prediction) : undefined}
                 className="w-full px-5 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
                 style={{ borderBottom: "1px solid #F8FAFC" }}
               >
@@ -855,8 +910,21 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                 </div>
               </button>
             ))}
+            {predictions.length === 0 && search && !isLoading && (
+              <div
+                className="px-5 py-6 text-center"
+                style={{ color: "#94A3B8", fontFamily: '"Inter", sans-serif', fontSize: "0.8rem" }}
+              >
+                <MapPin className="w-5 h-5 mx-auto mb-2" style={{ opacity: 0.5 }} strokeWidth={2} />
+                No locations found for "{search}"
+                <div style={{ fontSize: "0.7rem", marginTop: "0.25rem" }}>
+                  Try a different search or click on the map
+                </div>
+              </div>
+            )}
           </div>
         )}
+        </div>
 
         {/* Footer Actions */}
         {!isInitializing && !initError && (
