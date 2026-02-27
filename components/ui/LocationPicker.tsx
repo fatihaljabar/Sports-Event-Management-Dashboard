@@ -584,7 +584,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                   fontFamily: '"Inter", sans-serif',
                 }}
               >
-                {hasGooglePlaces ? "Search worldwide or choose from popular cities" : "Loading location services..."}
+                {hasGooglePlaces ? "Search cities worldwide using Google Places" : "Loading location services..."}
               </p>
             </div>
           </div>
