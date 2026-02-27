@@ -451,24 +451,51 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const autocompleteServiceRef = useRef<any>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
   const [hasGooglePlaces, setHasGooglePlaces] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
 
   // Load Google Places script when modal opens
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (apiKey && !window.google?.maps?.places) {
-      loadGooglePlacesScript(() => {
+
+    // Debug: log API key presence
+    console.log("[LocationModal] API Key exists:", !!apiKey);
+
+    // Initialize autocomplete service if already available
+    const initializeService = () => {
+      try {
         if (window.google?.maps?.places) {
-          setHasGooglePlaces(true);
-          setScriptLoaded(true);
           autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+          setHasGooglePlaces(true);
+          setIsInitializing(false);
+          console.log("[LocationModal] Google Places initialized successfully");
+          return true;
         }
+        return false;
+      } catch (error) {
+        console.error("[LocationModal] Failed to initialize:", error);
+        setInitError("Failed to initialize Google Places");
+        setIsInitializing(false);
+        return false;
+      }
+    };
+
+    // Try to initialize immediately if already loaded
+    if (initializeService()) {
+      return;
+    }
+
+    // Load script and then initialize
+    if (apiKey) {
+      loadGooglePlacesScript(() => {
+        console.log("[LocationModal] Script loaded, initializing...");
+        setTimeout(() => initializeService(), 100);
       });
-    } else if (window.google?.maps?.places) {
-      setHasGooglePlaces(true);
-      setScriptLoaded(true);
-      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+    } else {
+      console.error("[LocationModal] No API key found");
+      setInitError("Google Maps API key not configured");
+      setIsInitializing(false);
     }
   }, []);
 
@@ -579,12 +606,15 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
               </h3>
               <p
                 style={{
-                  color: "#94A3B8",
+                  color: initError ? "#EF4444" : "#94A3B8",
                   fontSize: "0.75rem",
                   fontFamily: '"Inter", sans-serif',
                 }}
               >
-                {hasGooglePlaces ? "Search cities worldwide using Google Places" : "Loading location services..."}
+                {isInitializing ? "Loading Google Places..." :
+                 initError ? "Error loading Google Places" :
+                 hasGooglePlaces ? "Search cities worldwide using Google Places" :
+                 "Initializing..."}
               </p>
             </div>
           </div>
@@ -617,14 +647,14 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={hasGooglePlaces ? "Search any city worldwide..." : "Search cities..."}
-              disabled={!hasGooglePlaces && !scriptLoaded}
+              placeholder={isInitializing ? "Loading..." : initError ? "Error loading service" : "Search any city worldwide..."}
+              disabled={isInitializing || initError !== null}
               className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm outline-none"
               style={{
                 border: "1.5px solid #E2E8F0",
-                backgroundColor: hasGooglePlaces ? "#F8FAFC" : "#F1F5F9",
+                backgroundColor: (hasGooglePlaces && !isInitializing) ? "#F8FAFC" : "#F1F5F9",
                 fontFamily: '"Inter", sans-serif',
-                color: hasGooglePlaces ? "#1E293B" : "#94A3B8",
+                color: (hasGooglePlaces && !isInitializing) ? "#1E293B" : "#94A3B8",
               }}
             />
             {isLoading && (
@@ -638,6 +668,31 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           className="overflow-y-auto"
           style={{ maxHeight: "calc(80vh - 140px)" }}
         >
+          {/* Initializing state */}
+          {isInitializing && (
+            <div className="px-5 py-12 text-center flex flex-col items-center gap-3">
+              <Loader2 className="w-10 h-10 animate-spin" style={{ color: "#2563EB" }} strokeWidth={2} />
+              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.875rem", color: "#64748B" }}>
+                Loading Google Places API...
+              </div>
+            </div>
+          )}
+
+          {/* Error state */}
+          {initError && !isInitializing && (
+            <div className="px-5 py-12 text-center flex flex-col items-center gap-3">
+              <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "#FEF2F2", color: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X className="w-6 h-6" strokeWidth={2} />
+              </div>
+              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.875rem", color: "#DC2626" }}>
+                {initError}
+              </div>
+              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: "0.75rem", color: "#64748B" }}>
+                Please check your API key configuration
+              </div>
+            </div>
+          )}
+
           {/* Google Places results */}
           {predictions.length > 0 && (
             <>
@@ -711,7 +766,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           )}
 
           {/* No results state */}
-          {predictions.length === 0 && search && !isLoading && (
+          {predictions.length === 0 && search && !isLoading && !isInitializing && !initError && (
             <div
               className="px-5 py-8 text-center"
               style={{ color: "#94A3B8", fontFamily: '"Inter", sans-serif' }}
@@ -721,7 +776,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           )}
 
           {/* Empty state when no search */}
-          {predictions.length === 0 && !search && !isLoading && (
+          {predictions.length === 0 && !search && !isLoading && !isInitializing && !initError && (
             <div
               className="px-5 py-12 text-center flex flex-col items-center gap-3"
               style={{ color: "#94A3B8" }}
