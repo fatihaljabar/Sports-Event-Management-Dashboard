@@ -656,13 +656,85 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           // Center map on new location
           map.panTo({ lat, lng });
 
-          // Reverse geocode to get location name
-          if (geocoderRef.current) {
+          // Try to find nearby POI first (like Google Maps behavior)
+          // If clicking on a POI, show POI name; otherwise show address
+          if (window.google?.maps?.places?.PlacesService) {
+            const service = new window.google.maps.places.PlacesService(document.createElement("div"));
+
+            // Search for nearby places with small radius
+            service.nearbySearch(
+              {
+                location: { lat, lng },
+                radius: 50, // 50 meters radius
+              },
+              (results: any[], status: string) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length > 0) {
+                  // Find the closest place
+                  let closestPlace = results[0];
+                  let minDistance = Infinity;
+
+                  for (const place of results) {
+                    if (place.geometry?.location) {
+                      const placeLat = place.geometry.location.lat();
+                      const placeLng = place.geometry.location.lng();
+                      const distance = Math.sqrt(Math.pow(lat - placeLat, 2) + Math.pow(lng - placeLng, 2));
+                      if (distance < minDistance) {
+                        minDistance = distance;
+                        closestPlace = place;
+                      }
+                    }
+                  }
+
+                  // If closest place is very close (within 20 meters), use its name
+                  if (minDistance < 0.0002 && closestPlace.name) {
+                    // Get place details to get full address
+                    service.getDetails(
+                      {
+                        placeId: closestPlace.place_id,
+                        fields: ["name", "formatted_address", "address_components"],
+                      },
+                      (detail: any, detailStatus: string) => {
+                        if (detailStatus === "OK" && detail) {
+                          // Use POI name directly (like Google Maps behavior)
+                          const displayName = detail.name;
+                          setSelectedLocation({ lat, lng, name: displayName });
+                          setSearch(displayName);
+                        } else {
+                          // Fallback to just the name
+                          setSelectedLocation({ lat, lng, name: closestPlace.name });
+                          setSearch(closestPlace.name);
+                        }
+                      }
+                    );
+                    return;
+                  }
+                }
+
+                // No nearby POI found, use reverse geocoding for address
+                if (geocoderRef.current) {
+                  geocoderRef.current.geocode(
+                    { location: { lat, lng } },
+                    (geoResults: any[], geoStatus: string) => {
+                      if (geoStatus === "OK" && geoResults?.[0]) {
+                        // Format the result to match autocomplete style (remove Plus Code, clean prefixes)
+                        const formattedName = formatReverseGeocodeResult(
+                          geoResults[0].formatted_address,
+                          geoResults[0].address_components
+                        );
+                        setSelectedLocation({ lat, lng, name: formattedName });
+                        setSearch(formattedName);
+                      }
+                    }
+                  );
+                }
+              }
+            );
+          } else if (geocoderRef.current) {
+            // Fallback if PlacesService not available
             geocoderRef.current.geocode(
               { location: { lat, lng } },
               (results: any[], status: string) => {
                 if (status === "OK" && results?.[0]) {
-                  // Format the result to match autocomplete style (remove Plus Code, clean prefixes)
                   const formattedName = formatReverseGeocodeResult(
                     results[0].formatted_address,
                     results[0].address_components
