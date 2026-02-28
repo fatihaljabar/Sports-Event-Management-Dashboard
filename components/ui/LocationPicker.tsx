@@ -786,12 +786,37 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           // Center map on new location
           map.panTo({ lat, lng });
 
-          // Try to find nearby POI first (like Google Maps behavior)
-          // If clicking on a POI, show POI name; otherwise show address
+          // IMPORTANT: Check if clicked on a POI marker (Google Maps POI Click Event)
+          // When clicking on a POI marker, the event contains a placeId property
+          if (e.placeId && window.google?.maps?.places?.PlacesService) {
+            const service = new window.google.maps.places.PlacesService(document.createElement("div"));
+
+            service.getDetails(
+              {
+                placeId: e.placeId,
+                fields: ["name", "types", "formatted_address", "address_components"],
+              },
+              (detail: any, detailStatus: string) => {
+                if (detailStatus === "OK" && detail) {
+                  // Use the POI name directly - this is exactly like Google Maps behavior
+                  setSelectedLocation({ lat, lng, name: detail.name });
+                  setSearch(detail.name);
+                  console.log("[LocationModal] Clicked on POI:", detail.name);
+                } else {
+                  // Fallback if getDetails fails
+                  setSelectedLocation({ lat, lng, name: "Selected Location" });
+                  setSearch("Selected Location");
+                }
+              }
+            );
+            return; // Exit early - we have the POI data
+          }
+
+          // If not a POI click, try nearby search
           if (window.google?.maps?.places?.PlacesService) {
             const service = new window.google.maps.places.PlacesService(document.createElement("div"));
 
-            // Helper function to handle POI selection
+            // Helper function to handle POI selection from nearby search
             const handlePOISelection = (places: any[]) => {
               if (places.length === 0) return false;
 
@@ -834,6 +859,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                         const displayName = detail.name;
                         setSelectedLocation({ lat, lng, name: displayName });
                         setSearch(displayName);
+                        console.log("[LocationModal] Selected from nearby search:", displayName);
                       } else {
                         // Fallback to just the name
                         setSelectedLocation({ lat, lng, name: bestPlace.name });
@@ -847,11 +873,11 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
               return false;
             };
 
-            // Search for nearby places with larger radius
+            // Search for nearby places
             service.nearbySearch(
               {
                 location: { lat, lng },
-                radius: 500, // 500 meters - covers most POIs when clicking on map
+                radius: 500, // 500 meters
               },
               (results: any[], status: string) => {
                 if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length > 0) {
@@ -872,6 +898,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                         );
                         setSelectedLocation({ lat, lng, name: formattedName });
                         setSearch(formattedName);
+                        console.log("[LocationModal] Using geocoded address:", formattedName);
                       }
                     }
                   );
