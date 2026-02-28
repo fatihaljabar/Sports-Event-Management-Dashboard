@@ -259,9 +259,18 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteServiceRef = useRef<any>(null);
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; name: string } | null>(
-    initialCoordinates ? { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value } : null
-  );
+
+  // Initialize currentLocation with a ref to track the source
+  const initialLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+  initialLocationRef.current = initialCoordinates || null;
+
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; name: string } | null>(() => {
+    // Only set initial location if both coordinates AND value are provided
+    if (initialCoordinates && value) {
+      return { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
+    }
+    return null;
+  });
 
   // Load Google Places API on mount
   useEffect(() => {
@@ -280,15 +289,20 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
     setQuery(value);
   }, [value]);
 
-  // Update currentLocation when initialCoordinates or value changes
+  // Update currentLocation when initialCoordinates changes
+  // This ensures the map modal opens at the correct position when editing
   useEffect(() => {
-    if (initialCoordinates) {
-      setCurrentLocation({ lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value });
-    } else {
-      // Keep currentLocation if user has selected something, otherwise null
-      setCurrentLocation(prev => prev?.name === value ? prev : null);
+    console.log('[LocationPicker] initialCoordinates:', initialCoordinates, 'value:', value);
+    if (initialCoordinates && initialCoordinates.lat && initialCoordinates.lng) {
+      const newLocation = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
+      console.log('[LocationPicker] Setting currentLocation:', newLocation);
+      setCurrentLocation(newLocation);
+    } else if (!initialLocationRef.current) {
+      // Only clear if we never had initial coordinates
+      console.log('[LocationPicker] Clearing currentLocation (no initial coords)');
+      setCurrentLocation(null);
     }
-  }, [initialCoordinates, value]);
+  }, [initialCoordinates?.lat, initialCoordinates?.lng, value]);
 
   // Fetch predictions from Google Places
   const fetchPredictions = useCallback(async (input: string) => {
@@ -689,6 +703,11 @@ function sortPlacesByPriority(
 }
 
 function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProps) {
+  // Log what we received on mount
+  useEffect(() => {
+    console.log('[LocationModal] Mounted with initialLocation:', initialLocation);
+  }, [initialLocation]);
+
   const [search, setSearch] = useState("");
   const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -769,6 +788,8 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
         const centerLat = initialLocation?.lat ?? -6.2088;
         const centerLng = initialLocation?.lng ?? 106.8456;
         const zoom = initialLocation ? 15 : 13;
+
+        console.log('[LocationModal] Initializing map with center:', { lat: centerLat, lng: centerLng, zoom }, 'initialLocation:', initialLocation);
 
         const map = new window.google.maps.Map(mapRef.current, {
           center: { lat: centerLat, lng: centerLng },

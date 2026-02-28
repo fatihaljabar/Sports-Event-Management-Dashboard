@@ -81,6 +81,9 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
       : event.location.city;
     setLocation(locationString);
 
+    // Debug log for coordinates
+    console.log('[EditEventModal] Event coordinates:', event.location.coordinates, 'Location:', locationString);
+
     // Set existing logos
     if (event.logoUrl) {
       setEventLogo({
@@ -360,6 +363,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
               <div>
                 <FieldLabel required>Host City / Venue</FieldLabel>
                 <LocationPicker
+                  key={`location-${event.id}-${event.location.coordinates?.lat ?? 'null'}-${event.location.coordinates?.lng ?? 'null'}`}
                   value={location}
                   onChange={handleLocationChange}
                   initialCoordinates={event.location.coordinates}
