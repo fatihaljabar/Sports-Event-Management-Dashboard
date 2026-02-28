@@ -52,6 +52,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
   const [selectedSports, setSelectedSports] = useState<SportCategory[]>([]);
   const [location, setLocation] = useState(""); // Combined location for LocationPicker
   const [timezone, setTimezone] = useState(event.location.timezone);
+  const [locationCoordinates, setLocationCoordinates] = useState<{ lat: number; lng: number } | null>(event.location.coordinates || null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [quota, setQuota] = useState(event.maxParticipants.toString());
@@ -80,9 +81,6 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
       ? `${event.location.city}, ${event.location.venue}`
       : event.location.city;
     setLocation(locationString);
-
-    // Debug log for coordinates
-    console.log('[EditEventModal] Event coordinates:', event.location.coordinates, 'Location:', locationString);
 
     // Set existing logos
     if (event.logoUrl) {
@@ -129,7 +127,9 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
       setTimezone(timezoneValue);
     }
     if (coordinates) {
-      console.log("Location coordinates:", coordinates);
+      setLocationCoordinates(coordinates);
+    } else {
+      setLocationCoordinates(null);
     }
   };
 
@@ -191,6 +191,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
         })),
         keepExistingLogo,
         keepExistingSponsors,
+        coordinates: locationCoordinates,
       });
 
       if (result.success) {

@@ -727,6 +727,7 @@ export interface UpdateEventData {
   sponsorLogos?: Array<{ name: string; base64: string; fileName: string }>;
   keepExistingLogo?: boolean;
   keepExistingSponsors?: boolean;
+  coordinates?: { lat: number; lng: number } | null;
 }
 
 export interface UpdateEventResult {
@@ -862,6 +863,10 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
         logoUrl,
         sponsorLogos: uploadedSponsors.length > 0 ? (uploadedSponsors as unknown as Prisma.InputJsonValue) : (existingEvent.sponsorLogos || Prisma.JsonNull),
         sports: data.sports as unknown as Prisma.InputJsonValue,
+        // Update coordinates if provided
+        ...(data.coordinates !== undefined && {
+          coordinates: data.coordinates as unknown as Prisma.InputJsonValue,
+        }),
       },
     });
 
@@ -879,7 +884,7 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
       location: {
         city: event.locationCity,
         venue: event.locationVenue ?? "",
-        coordinates: null,
+        coordinates: event.coordinates as unknown as SportEvent["location"]["coordinates"],
         timezone: event.locationTimezone,
       },
       startDate: event.startDate.toISOString(),

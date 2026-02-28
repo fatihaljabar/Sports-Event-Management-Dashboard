@@ -292,14 +292,11 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
   // Update currentLocation when initialCoordinates changes
   // This ensures the map modal opens at the correct position when editing
   useEffect(() => {
-    console.log('[LocationPicker] initialCoordinates:', initialCoordinates, 'value:', value);
     if (initialCoordinates && initialCoordinates.lat && initialCoordinates.lng) {
       const newLocation = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
-      console.log('[LocationPicker] Setting currentLocation:', newLocation);
       setCurrentLocation(newLocation);
     } else if (!initialLocationRef.current) {
       // Only clear if we never had initial coordinates
-      console.log('[LocationPicker] Clearing currentLocation (no initial coords)');
       setCurrentLocation(null);
     }
   }, [initialCoordinates?.lat, initialCoordinates?.lng, value]);
@@ -703,11 +700,6 @@ function sortPlacesByPriority(
 }
 
 function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProps) {
-  // Log what we received on mount
-  useEffect(() => {
-    console.log('[LocationModal] Mounted with initialLocation:', initialLocation);
-  }, [initialLocation]);
-
   const [search, setSearch] = useState("");
   const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -788,8 +780,6 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
         const centerLat = initialLocation?.lat ?? -6.2088;
         const centerLng = initialLocation?.lng ?? 106.8456;
         const zoom = initialLocation ? 15 : 13;
-
-        console.log('[LocationModal] Initializing map with center:', { lat: centerLat, lng: centerLng, zoom }, 'initialLocation:', initialLocation);
 
         const map = new window.google.maps.Map(mapRef.current, {
           center: { lat: centerLat, lng: centerLng },
