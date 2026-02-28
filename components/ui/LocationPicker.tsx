@@ -539,6 +539,136 @@ interface LocationModalProps {
   onSelect: (location: string, placeId?: string, coordinates?: { lat: number; lng: number }) => void;
 }
 
+/**
+ * POI Type Priority - Higher number = more important (should be selected over smaller POIs inside)
+ * This mimics Google Maps behavior where clicking a mall selects the mall, not a store inside
+ */
+const POI_TYPE_PRIORITY: Record<string, number> = {
+  // Large venues/buildings (highest priority)
+  "shopping_mall": 100,
+  "stadium": 100,
+  "airport": 100,
+  "university": 95,
+  "hospital": 95,
+  "convention_center": 90,
+  "casino": 85,
+  "amusement_park": 85,
+  "zoo": 85,
+  "museum": 80,
+  "library": 75,
+  "city_hall": 75,
+  "courthouse": 70,
+  "place_of_worship": 70,
+  "primary_school": 65,
+  "secondary_school": 65,
+  "school": 65,
+
+  // Accommodation
+  "lodging": 60,
+  "hotel": 60,
+
+  // Food & Drink (lower priority - usually inside larger venues)
+  "restaurant": 20,
+  "cafe": 20,
+  "bar": 20,
+  "night_club": 20,
+  "bakery": 15,
+  "meal_takeaway": 15,
+  "meal_delivery": 15,
+
+  // Stores (lower priority - usually inside malls)
+  "store": 15,
+  "supermarket": 25,
+  "grocery_or_supermarket": 25,
+  "clothing_store": 15,
+  "shoe_store": 15,
+  "electronics_store": 15,
+  "department_store": 30,
+  "hardware_store": 20,
+
+  // Services (low priority)
+  "bank": 30,
+  "atm": 10,
+  "pharmacy": 35,
+  "doctor": 30,
+  "dentist": 30,
+  "hair_care": 15,
+  "beauty_salon": 15,
+  "gym": 25,
+
+  // Transportation
+  "transit_station": 50,
+  "subway_station": 50,
+  "bus_station": 45,
+  "train_station": 50,
+  "taxi_stand": 20,
+
+  // Generic type (lowest priority - use as fallback)
+  "establishment": 5,
+  "point_of_interest": 5,
+};
+
+/**
+ * Get priority score for a place based on its types
+ * Higher score = more important, should be selected over smaller POIs
+ */
+function getPlacePriority(placeTypes: string[] = []): number {
+  if (!placeTypes || placeTypes.length === 0) return 5;
+
+  let maxPriority = 5; // Default low priority
+
+  for (const type of placeTypes) {
+    const priority = POI_TYPE_PRIORITY[type];
+    if (priority && priority > maxPriority) {
+      maxPriority = priority;
+    }
+  }
+
+  return maxPriority;
+}
+
+/**
+ * Sort nearby places by priority and distance
+ * Prioritizes larger venues (malls, stadiums) over smaller ones (shops, restaurants)
+ */
+function sortPlacesByPriority(
+  places: any[],
+  clickLat: number,
+  clickLng: number
+): any[] {
+  return places
+    .map((place) => {
+      const placeLat = place.geometry?.location?.lat();
+      const placeLng = place.geometry?.location?.lng();
+
+      if (!placeLat || !placeLng) return null;
+
+      // Calculate distance
+      const distance = Math.sqrt(
+        Math.pow(clickLat - placeLat, 2) + Math.pow(clickLng - placeLng, 2)
+      );
+
+      // Get priority based on place types
+      const priority = getPlacePriority(place.types);
+
+      return {
+        place,
+        distance,
+        priority,
+      };
+    })
+    .filter((item) => item !== null)
+    .sort((a, b) => {
+      // First sort by priority (higher first)
+      if (b.priority !== a.priority) {
+        return b.priority - a.priority;
+      }
+      // Then sort by distance (closer first)
+      return a.distance - b.distance;
+    })
+    .map((item) => item.place);
+}
+
 function LocationModal({ onClose, onSelect }: LocationModalProps) {
   const [search, setSearch] = useState("");
   const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
@@ -661,52 +791,54 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           if (window.google?.maps?.places?.PlacesService) {
             const service = new window.google.maps.places.PlacesService(document.createElement("div"));
 
-            // Search for nearby places with small radius
+            // Search for nearby places with larger radius to catch big venues like malls
             service.nearbySearch(
               {
                 location: { lat, lng },
-                radius: 50, // 50 meters radius
+                radius: 150, // 150 meters - enough for malls, stadiums
               },
               (results: any[], status: string) => {
                 if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length > 0) {
-                  // Find the closest place
-                  let closestPlace = results[0];
-                  let minDistance = Infinity;
+                  // Sort places by priority (malls > restaurants) then distance
+                  const sortedPlaces = sortPlacesByPriority(results, lat, lng);
 
-                  for (const place of results) {
-                    if (place.geometry?.location) {
-                      const placeLat = place.geometry.location.lat();
-                      const placeLng = place.geometry.location.lng();
-                      const distance = Math.sqrt(Math.pow(lat - placeLat, 2) + Math.pow(lng - placeLng, 2));
-                      if (distance < minDistance) {
-                        minDistance = distance;
-                        closestPlace = place;
-                      }
-                    }
-                  }
+                  if (sortedPlaces.length > 0) {
+                    const bestPlace = sortedPlaces[0];
 
-                  // If closest place is very close (within 20 meters), use its name
-                  if (minDistance < 0.0002 && closestPlace.name) {
-                    // Get place details to get full address
-                    service.getDetails(
-                      {
-                        placeId: closestPlace.place_id,
-                        fields: ["name", "formatted_address", "address_components"],
-                      },
-                      (detail: any, detailStatus: string) => {
-                        if (detailStatus === "OK" && detail) {
-                          // Use POI name directly (like Google Maps behavior)
-                          const displayName = detail.name;
-                          setSelectedLocation({ lat, lng, name: displayName });
-                          setSearch(displayName);
-                        } else {
-                          // Fallback to just the name
-                          setSelectedLocation({ lat, lng, name: closestPlace.name });
-                          setSearch(closestPlace.name);
+                    // Calculate distance to the best place
+                    const placeLat = bestPlace.geometry?.location?.lat();
+                    const placeLng = bestPlace.geometry?.location?.lng();
+                    const distance = Math.sqrt(Math.pow(lat - placeLat, 2) + Math.pow(lng - placeLng, 2));
+
+                    // Get place priority for distance threshold
+                    const priority = getPlacePriority(bestPlace.types);
+
+                    // Higher priority places (malls, stadiums) get larger distance threshold
+                    // This ensures clicking anywhere in a mall selects the mall, not a store inside
+                    const distanceThreshold = priority >= 80 ? 0.0015 : 0.0003; // 150m for venues, 30m for others
+
+                    if (distance < distanceThreshold && bestPlace.name) {
+                      // Get place details to get full address
+                      service.getDetails(
+                        {
+                          placeId: bestPlace.place_id,
+                          fields: ["name", "types", "formatted_address", "address_components"],
+                        },
+                        (detail: any, detailStatus: string) => {
+                          if (detailStatus === "OK" && detail) {
+                            // Use POI name directly (like Google Maps behavior)
+                            const displayName = detail.name;
+                            setSelectedLocation({ lat, lng, name: displayName });
+                            setSearch(displayName);
+                          } else {
+                            // Fallback to just the name
+                            setSelectedLocation({ lat, lng, name: bestPlace.name });
+                            setSearch(bestPlace.name);
+                          }
                         }
-                      }
-                    );
-                    return;
+                      );
+                      return;
+                    }
                   }
                 }
 
