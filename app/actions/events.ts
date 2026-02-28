@@ -550,7 +550,7 @@ export async function getEvents(): Promise<SportEvent[]> {
       location: {
         city: event.locationCity,
         venue: event.locationVenue ?? "",
-        coordinates: null,
+        coordinates: event.coordinates as unknown as SportEvent["location"]["coordinates"],
         timezone: event.locationTimezone,
       },
       startDate: event.startDate.toISOString(),
@@ -588,7 +588,7 @@ export async function getEventById(eventId: string): Promise<SportEvent | null> 
       location: {
         city: event.locationCity,
         venue: event.locationVenue ?? "",
-        coordinates: null,
+        coordinates: event.coordinates as unknown as SportEvent["location"]["coordinates"],
         timezone: event.locationTimezone,
       },
       startDate: event.startDate.toISOString(),
