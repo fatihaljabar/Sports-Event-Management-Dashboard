@@ -52,7 +52,7 @@ export function MapPicker({ location, onLocationChange, onClose }: MapPickerProp
 
     // Try to detect timezone based on coordinates (simplified)
     // In production, you'd use a proper timezone API
-    let detectedTimezone = TIMEZONE_MAP[location.city] || "Asia/Bangkok (GMT+7)";
+    const detectedTimezone = TIMEZONE_MAP[location.city] || "Asia/Bangkok (GMT+7)";
 
     // Update location
     onLocationChange({
