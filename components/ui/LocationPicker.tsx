@@ -791,74 +791,105 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           if (window.google?.maps?.places?.PlacesService) {
             const service = new window.google.maps.places.PlacesService(document.createElement("div"));
 
-            // Search for nearby places with larger radius to catch big venues like malls
-            service.nearbySearch(
-              {
-                location: { lat, lng },
-                radius: 150, // 150 meters - enough for malls, stadiums
-              },
-              (results: any[], status: string) => {
-                if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length > 0) {
-                  // Sort places by priority (malls > restaurants) then distance
-                  const sortedPlaces = sortPlacesByPriority(results, lat, lng);
+            // Helper function to handle POI selection
+            const handlePOISelection = (places: any[]) => {
+              if (places.length === 0) return false;
 
-                  if (sortedPlaces.length > 0) {
-                    const bestPlace = sortedPlaces[0];
+              // Sort places by priority (malls > restaurants) then distance
+              const sortedPlaces = sortPlacesByPriority(places, lat, lng);
 
-                    // Calculate distance to the best place
-                    const placeLat = bestPlace.geometry?.location?.lat();
-                    const placeLng = bestPlace.geometry?.location?.lng();
-                    const distance = Math.sqrt(Math.pow(lat - placeLat, 2) + Math.pow(lng - placeLng, 2));
+              if (sortedPlaces.length > 0) {
+                const bestPlace = sortedPlaces[0];
 
-                    // Get place priority for distance threshold
-                    const priority = getPlacePriority(bestPlace.types);
+                // Calculate distance to the best place
+                const placeLat = bestPlace.geometry?.location?.lat();
+                const placeLng = bestPlace.geometry?.location?.lng();
+                const distance = Math.sqrt(Math.pow(lat - placeLat, 2) + Math.pow(lng - placeLng, 2));
 
-                    // Higher priority places (malls, stadiums) get larger distance threshold
-                    // This ensures clicking anywhere in a mall selects the mall, not a store inside
-                    const distanceThreshold = priority >= 80 ? 0.0015 : 0.0003; // 150m for venues, 30m for others
+                // Get place priority for distance threshold
+                const priority = getPlacePriority(bestPlace.types);
 
-                    if (distance < distanceThreshold && bestPlace.name) {
-                      // Get place details to get full address
-                      service.getDetails(
-                        {
-                          placeId: bestPlace.place_id,
-                          fields: ["name", "types", "formatted_address", "address_components"],
-                        },
-                        (detail: any, detailStatus: string) => {
-                          if (detailStatus === "OK" && detail) {
-                            // Use POI name directly (like Google Maps behavior)
-                            const displayName = detail.name;
-                            setSelectedLocation({ lat, lng, name: displayName });
-                            setSearch(displayName);
-                          } else {
-                            // Fallback to just the name
-                            setSelectedLocation({ lat, lng, name: bestPlace.name });
-                            setSearch(bestPlace.name);
-                          }
-                        }
-                      );
-                      return;
-                    }
-                  }
-                }
+                // Distance thresholds in degrees (approximate)
+                // High priority places (malls, stadiums): 200m
+                // Medium priority (hotels, supermarkets): 100m
+                // Low priority (restaurants, stores): 50m
+                let distanceThreshold = 0.0005; // 50m default
+                if (priority >= 80) distanceThreshold = 0.002; // 200m for major venues
+                else if (priority >= 50) distanceThreshold = 0.001; // 100m for medium places
+                else if (priority >= 25) distanceThreshold = 0.0007; // 70m for supermarkets etc
 
-                // No nearby POI found, use reverse geocoding for address
-                if (geocoderRef.current) {
-                  geocoderRef.current.geocode(
-                    { location: { lat, lng } },
-                    (geoResults: any[], geoStatus: string) => {
-                      if (geoStatus === "OK" && geoResults?.[0]) {
-                        // Format the result to match autocomplete style (remove Plus Code, clean prefixes)
-                        const formattedName = formatReverseGeocodeResult(
-                          geoResults[0].formatted_address,
-                          geoResults[0].address_components
-                        );
-                        setSelectedLocation({ lat, lng, name: formattedName });
-                        setSearch(formattedName);
+                // Always accept POI if it's very close (within 10m) regardless of priority
+                const veryCloseThreshold = 0.0001; // ~10m
+
+                if (distance < distanceThreshold || distance < veryCloseThreshold) {
+                  // Get place details to get full address
+                  service.getDetails(
+                    {
+                      placeId: bestPlace.place_id,
+                      fields: ["name", "types", "formatted_address", "address_components"],
+                    },
+                    (detail: any, detailStatus: string) => {
+                      if (detailStatus === "OK" && detail) {
+                        // Use POI name directly (like Google Maps behavior)
+                        const displayName = detail.name;
+                        setSelectedLocation({ lat, lng, name: displayName });
+                        setSearch(displayName);
+                      } else {
+                        // Fallback to just the name
+                        setSelectedLocation({ lat, lng, name: bestPlace.name });
+                        setSearch(bestPlace.name);
                       }
                     }
                   );
+                  return true;
                 }
+              }
+              return false;
+            };
+
+            // First search: By radius (300m) to catch nearby places
+            service.nearbySearch(
+              {
+                location: { lat, lng },
+                radius: 300, // 300 meters - larger radius to catch POIs when zoomed in
+              },
+              (results: any[], status: string) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length > 0) {
+                  const handled = handlePOISelection(results);
+                  if (handled) return;
+                }
+
+                // Second search: Try with rankBy DISTANCE to get closest places
+                service.nearbySearch(
+                  {
+                    location: { lat, lng },
+                    rankBy: window.google.maps.places.RankBy.DISTANCE,
+                  },
+                  (distanceResults: any[], distanceStatus: string) => {
+                    if (distanceStatus === window.google.maps.places.PlacesServiceStatus.OK && distanceResults?.length > 0) {
+                      const handled = handlePOISelection(distanceResults.slice(0, 10)); // Check top 10 closest
+                      if (handled) return;
+                    }
+
+                    // No nearby POI found in any search, use reverse geocoding for address
+                    if (geocoderRef.current) {
+                      geocoderRef.current.geocode(
+                        { location: { lat, lng } },
+                        (geoResults: any[], geoStatus: string) => {
+                          if (geoStatus === "OK" && geoResults?.[0]) {
+                            // Format the result to match autocomplete style (remove Plus Code, clean prefixes)
+                            const formattedName = formatReverseGeocodeResult(
+                              geoResults[0].formatted_address,
+                              geoResults[0].address_components
+                            );
+                            setSelectedLocation({ lat, lng, name: formattedName });
+                            setSearch(formattedName);
+                          }
+                        }
+                      );
+                    }
+                  }
+                );
               }
             );
           } else if (geocoderRef.current) {
