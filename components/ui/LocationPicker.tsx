@@ -847,11 +847,11 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
               return false;
             };
 
-            // First search: By radius (300m) to catch nearby places
+            // Search for nearby places with larger radius
             service.nearbySearch(
               {
                 location: { lat, lng },
-                radius: 300, // 300 meters - larger radius to catch POIs when zoomed in
+                radius: 500, // 500 meters - covers most POIs when clicking on map
               },
               (results: any[], status: string) => {
                 if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length > 0) {
@@ -859,37 +859,23 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                   if (handled) return;
                 }
 
-                // Second search: Try with rankBy DISTANCE to get closest places
-                service.nearbySearch(
-                  {
-                    location: { lat, lng },
-                    rankBy: window.google.maps.places.RankBy.DISTANCE,
-                  },
-                  (distanceResults: any[], distanceStatus: string) => {
-                    if (distanceStatus === window.google.maps.places.PlacesServiceStatus.OK && distanceResults?.length > 0) {
-                      const handled = handlePOISelection(distanceResults.slice(0, 10)); // Check top 10 closest
-                      if (handled) return;
+                // No nearby POI found, use reverse geocoding for address
+                if (geocoderRef.current) {
+                  geocoderRef.current.geocode(
+                    { location: { lat, lng } },
+                    (geoResults: any[], geoStatus: string) => {
+                      if (geoStatus === "OK" && geoResults?.[0]) {
+                        // Format the result to match autocomplete style (remove Plus Code, clean prefixes)
+                        const formattedName = formatReverseGeocodeResult(
+                          geoResults[0].formatted_address,
+                          geoResults[0].address_components
+                        );
+                        setSelectedLocation({ lat, lng, name: formattedName });
+                        setSearch(formattedName);
+                      }
                     }
-
-                    // No nearby POI found in any search, use reverse geocoding for address
-                    if (geocoderRef.current) {
-                      geocoderRef.current.geocode(
-                        { location: { lat, lng } },
-                        (geoResults: any[], geoStatus: string) => {
-                          if (geoStatus === "OK" && geoResults?.[0]) {
-                            // Format the result to match autocomplete style (remove Plus Code, clean prefixes)
-                            const formattedName = formatReverseGeocodeResult(
-                              geoResults[0].formatted_address,
-                              geoResults[0].address_components
-                            );
-                            setSelectedLocation({ lat, lng, name: formattedName });
-                            setSearch(formattedName);
-                          }
-                        }
-                      );
-                    }
-                  }
-                );
+                  );
+                }
               }
             );
           } else if (geocoderRef.current) {
