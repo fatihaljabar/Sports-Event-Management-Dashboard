@@ -102,9 +102,7 @@ async function getTimezoneFromCoordinates(lat: number, lng: number): Promise<str
   }
 
   // Fallback to approximation if API fails
-  const fallback = getTimezoneByLocationFallback(lat, lng);
-  console.log("[Timezone] Using fallback timezone:", fallback);
-  return fallback;
+  return getTimezoneByLocationFallback(lat, lng);
 }
 
 // Fallback timezone approximation (used when API fails)
@@ -260,6 +258,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteServiceRef = useRef<any>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
   // Load Google Places API on mount
   useEffect(() => {
@@ -347,9 +346,12 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
+          // Store current location for map modal
+          setCurrentLocation({ lat, lng, name: description });
           const timezone = await getTimezoneFromCoordinates(lat, lng);
           onChange(description, timezone, { lat, lng });
         } else {
+          setCurrentLocation(null);
           const timezone = getTimezoneByLocation(description);
           onChange(description, timezone);
         }
@@ -364,12 +366,15 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     setPredictions([]);
 
     if (coordinates) {
+      // Store current location for map modal
+      setCurrentLocation({ lat: coordinates.lat, lng: coordinates.lng, name: location });
       // Fetch timezone using coordinates
       const timezone = await getTimezoneFromCoordinates(coordinates.lat, coordinates.lng);
       onChange(location, timezone, coordinates);
     } else if (placeId) {
       getPlaceDetails(placeId, location);
     } else {
+      setCurrentLocation(null);
       const timezone = getTimezoneByLocation(location);
       onChange(location, timezone);
     }
@@ -528,7 +533,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       )}
 
       {/* Map Modal */}
-      {showMapModal && <LocationModal onClose={() => setShowMapModal(false)} onSelect={selectLocation} />}
+      {showMapModal && <LocationModal onClose={() => setShowMapModal(false)} onSelect={selectLocation} initialLocation={currentLocation} />}
     </div>
   );
 }
@@ -537,6 +542,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 interface LocationModalProps {
   onClose: () => void;
   onSelect: (location: string, placeId?: string, coordinates?: { lat: number; lng: number }) => void;
+  initialLocation?: { lat: number; lng: number; name: string } | null;
 }
 
 /**
@@ -669,7 +675,7 @@ function sortPlacesByPriority(
     .map((item) => item.place);
 }
 
-function LocationModal({ onClose, onSelect }: LocationModalProps) {
+function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProps) {
   const [search, setSearch] = useState("");
   const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -684,7 +690,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   const markerRef = useRef<any>(null);
   const geocoderRef = useRef<any>(null);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
-  const [hasSelectedResult, setHasSelectedResult] = useState(false); // Track if user has clicked a result
+  const hasSelectedResultRef = useRef(false); // Ref to track hover preview state
 
   // Load Google Places script when modal opens
   useEffect(() => {
@@ -745,9 +751,14 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
       }
 
       try {
+        // Use initial location if provided, otherwise Jakarta default
+        const centerLat = initialLocation?.lat ?? -6.2088;
+        const centerLng = initialLocation?.lng ?? 106.8456;
+        const zoom = initialLocation ? 15 : 13;
+
         const map = new window.google.maps.Map(mapRef.current, {
-          center: { lat: -6.2088, lng: 106.8456 }, // Jakarta default
-          zoom: 13,
+          center: { lat: centerLat, lng: centerLng },
+          zoom,
           styles: [
             { featureType: "administrative", elementType: "geometry", stylers: [{ visibility: "on" }] },
             { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
@@ -764,6 +775,24 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
         });
 
         mapInstanceRef.current = map;
+
+        // If initial location provided, set marker and selected location
+        if (initialLocation) {
+          if (window.google?.maps?.Marker) {
+            markerRef.current = new window.google.maps.Marker({
+              position: { lat: initialLocation.lat, lng: initialLocation.lng },
+              map: mapInstanceRef.current,
+              animation: window.google.maps.Animation.DROP,
+            });
+          }
+          setSelectedLocation({
+            lat: initialLocation.lat,
+            lng: initialLocation.lng,
+            name: initialLocation.name,
+          });
+          setSearch(initialLocation.name);
+          hasSelectedResultRef.current = true; // Disable hover preview since we have a selection
+        }
 
         // Add click listener to map
         map.addListener("click", (e: any) => {
@@ -801,7 +830,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                   // Use the POI name directly - this is exactly like Google Maps behavior
                   setSelectedLocation({ lat, lng, name: detail.name });
                   setSearch(detail.name);
-                  console.log("[LocationModal] Clicked on POI:", detail.name);
+                  hasSelectedResultRef.current = true; // Disable hover preview
                 } else {
                   // Fallback if getDetails fails
                   setSelectedLocation({ lat, lng, name: "Selected Location" });
@@ -859,11 +888,12 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                         const displayName = detail.name;
                         setSelectedLocation({ lat, lng, name: displayName });
                         setSearch(displayName);
-                        console.log("[LocationModal] Selected from nearby search:", displayName);
+                        hasSelectedResultRef.current = true; // Disable hover preview
                       } else {
                         // Fallback to just the name
                         setSelectedLocation({ lat, lng, name: bestPlace.name });
                         setSearch(bestPlace.name);
+                        hasSelectedResultRef.current = true; // Disable hover preview
                       }
                     }
                   );
@@ -898,7 +928,6 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                         );
                         setSelectedLocation({ lat, lng, name: formattedName });
                         setSearch(formattedName);
-                        console.log("[LocationModal] Using geocoded address:", formattedName);
                       }
                     }
                   );
@@ -950,8 +979,8 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
 
   // Pan map to location when prediction is hovered (only active before user clicks a result)
   const handlePredictionHover = (prediction: GooglePrediction) => {
-    // Disable hover preview after user has clicked a result
-    if (hasSelectedResult) return;
+    // Disable hover preview after user has clicked a result or selected a location
+    if (hasSelectedResultRef.current) return;
     if (!window.google?.maps?.places?.PlacesService || !mapInstanceRef.current) return;
 
     const service = new window.google.maps.places.PlacesService(document.createElement("div"));
@@ -976,7 +1005,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
     }
 
     // Re-enable hover preview when user starts a new search
-    setHasSelectedResult(false);
+    hasSelectedResultRef.current = false;
 
     setIsLoading(true);
     try {
@@ -1003,7 +1032,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
   // Get place details and select
   const handleSelectPlace = useCallback(async (prediction: GooglePrediction) => {
     // Mark that user has clicked a result - disable hover preview
-    setHasSelectedResult(true);
+    hasSelectedResultRef.current = true;
 
     if (!window.google?.maps?.places?.PlacesService) {
       onSelect(prediction.description);
@@ -1025,6 +1054,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
           // Update map marker and center
           updateMarker(lat, lng);
           setSelectedLocation({ lat, lng, name: prediction.description });
+          hasSelectedResultRef.current = true; // Disable hover preview
 
           // Pass coordinates for timezone detection
           onSelect(prediction.description, prediction.place_id, { lat, lng });
@@ -1153,7 +1183,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                   onClick={() => {
                     setSearch("");
                     setPredictions([]);
-                    setHasSelectedResult(false); // Re-enable hover preview
+                    hasSelectedResultRef.current = false; // Re-enable hover preview
                     setSelectedLocation(null); // Clear selected location card
                   }}
                   className="flex items-center justify-center rounded-full transition-colors"
@@ -1208,7 +1238,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                       type="button"
                       onClick={() => {
                         setSelectedLocation(null);
-                        setHasSelectedResult(false); // Re-enable hover preview
+                        hasSelectedResultRef.current = false; // Re-enable hover preview
                       }}
                       className="flex items-center justify-center rounded-full transition-colors flex-shrink-0"
                       style={{ width: "20px", height: "20px", backgroundColor: "#F1F5F9", color: "#64748B" }}
@@ -1260,7 +1290,7 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
                 key={prediction.place_id}
                 type="button"
                 onClick={() => handleSelectPlace(prediction)}
-                onMouseEnter={!hasSelectedResult ? () => handlePredictionHover(prediction) : undefined}
+                onMouseEnter={() => handlePredictionHover(prediction)}
                 className="w-full px-5 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
                 style={{ borderBottom: "1px solid #F8FAFC" }}
               >
