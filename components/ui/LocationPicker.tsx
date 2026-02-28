@@ -129,6 +129,129 @@ function getTimezoneByLocationFallback(lat: number, lng: number): string {
   return "Asia/Jakarta"; // Default
 }
 
+/**
+ * Format reverse geocode result to match autocomplete style
+ * Removes Plus Codes and cleans up Indonesian prefixes
+ */
+function formatReverseGeocodeResult(
+  formattedAddress: string,
+  addressComponents?: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>
+): string {
+  if (!formattedAddress) return "";
+
+  // Remove Google Plus Code (pattern: XX00+00, XXX+XXX, etc.)
+  const plusCodePattern = /^[A-Z]{2}[0-9]+[+-]?[0-9A-Z]*,\s*/;
+  const cleaned = formattedAddress.replace(plusCodePattern, "");
+
+  // Helper to clean Indonesian admin names
+  const cleanIndonesianPrefix = (name: string): string => {
+    return name
+      .replace(/^Kecamatan\s+/i, "")
+      .replace(/^Kec\.\s+/i, "")
+      .replace(/^Kelurahan\s+/i, "")
+      .replace(/^Kel\.\s+/i, "")
+      .replace(/^Desa\s+/i, "")
+      .replace(/^Kota\s+/i, "")
+      .replace(/^Kabupaten\s+/i, "")
+      .replace(/^Kab\.\s+/i, "")
+      .replace(/^Provinsi\s+/i, "")
+      .replace(/^Prov\.\s+/i, "")
+      .replace(/^Daerah Khusus Ibukota\s+/i, "")
+      .replace(/^DKI\s+/i, "")
+      .replace(/^Daerah Istimewa\s+/i, "")
+      .replace(/^DI\s+/i, "")
+      .trim();
+  };
+
+  // If we have address components, build a cleaner format
+  if (addressComponents && addressComponents.length > 0) {
+    const components = addressComponents;
+
+    // Extract parts
+    const streetNumber = components.find(c => c.types.includes("street_number"))?.long_name || "";
+    const route = components.find(c => c.types.includes("route"))?.long_name || "";
+    const premise = components.find(c => c.types.includes("premise"))?.long_name || "";
+    const establishment = components.find(c => c.types.includes("establishment"))?.long_name || "";
+    const pointOfInterest = components.find(c => c.types.includes("point_of_interest"))?.long_name || "";
+    const locality = components.find(c => c.types.includes("locality"))?.long_name || "";
+    const admin2 = components.find(c => c.types.includes("administrative_area_level_2"))?.long_name || "";
+    const admin1 = components.find(c => c.types.includes("administrative_area_level_1"))?.long_name || "";
+    const country = components.find(c => c.types.includes("country"))?.long_name || "";
+    // Postal code (not displayed but used for filtering)
+
+    // Build clean address parts
+    const parts: string[] = [];
+
+    // Primary location name (POI, establishment, or premise)
+    if (pointOfInterest) parts.push(pointOfInterest);
+    else if (establishment) parts.push(establishment);
+    else if (premise) parts.push(premise);
+
+    // Street address
+    const streetParts = [streetNumber, route].filter(Boolean).join(" ");
+    if (streetParts) parts.push(streetParts);
+
+    // City/locality
+    const city = locality || cleanIndonesianPrefix(admin2);
+    if (city && !parts.includes(city)) parts.push(city);
+
+    // Province/State
+    let province = cleanIndonesianPrefix(admin1);
+    // For Indonesia, don't add province if it's Jakarta and city is also Jakarta
+    if (province && province !== city && country === "Indonesia") {
+      // Use English name for Indonesian provinces if available
+      const admin1Short = components.find(c => c.types.includes("administrative_area_level_1"))?.short_name;
+      if (admin1Short && admin1Short !== admin1) {
+        province = admin1Short;
+      }
+      parts.push(province);
+    } else if (province && province !== city && country !== "Indonesia") {
+      parts.push(province);
+    }
+
+    // Country (only if not the default/implicit country)
+    if (country && country !== "Indonesia") {
+      parts.push(country);
+    }
+
+    if (parts.length > 0) {
+      return parts.join(", ");
+    }
+  }
+
+  // Fallback: Clean the formatted address by removing known patterns
+  let fallback = cleaned;
+
+  // Remove Indonesian prefixes from formatted address
+  const indonesianPrefixes = [
+    /\bKecamatan\s+/gi,
+    /\bKec\.\s+/gi,
+    /\bKelurahan\s+/gi,
+    /\bKel\.\s+/gi,
+    /\bDesa\s+/gi,
+    /\bKota\s+/gi,
+    /\bKabupaten\s+/gi,
+    /\bKab\.\s+/gi,
+    /\bProvinsi\s+/gi,
+    /\bProv\.\s+/gi,
+    /\bDKI\s+/gi,
+    /\bDaerah Khusus Ibukota\s+/gi,
+  ];
+
+  for (const pattern of indonesianPrefixes) {
+    fallback = fallback.replace(pattern, "");
+  }
+
+  // Remove postal code at the end
+  fallback = fallback.replace(/\s+\d{5}$/, "");
+
+  return fallback.trim();
+}
+
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState(value);
@@ -539,9 +662,13 @@ function LocationModal({ onClose, onSelect }: LocationModalProps) {
               { location: { lat, lng } },
               (results: any[], status: string) => {
                 if (status === "OK" && results?.[0]) {
-                  const locationName = results[0].formatted_address;
-                  setSelectedLocation({ lat, lng, name: locationName });
-                  setSearch(locationName);
+                  // Format the result to match autocomplete style (remove Plus Code, clean prefixes)
+                  const formattedName = formatReverseGeocodeResult(
+                    results[0].formatted_address,
+                    results[0].address_components
+                  );
+                  setSelectedLocation({ lat, lng, name: formattedName });
+                  setSearch(formattedName);
                 }
               }
             );
