@@ -359,7 +359,11 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
               {/* Location */}
               <div>
                 <FieldLabel required>Host City / Venue</FieldLabel>
-                <LocationPicker value={location} onChange={handleLocationChange} />
+                <LocationPicker
+                  value={location}
+                  onChange={handleLocationChange}
+                  initialCoordinates={event.location.coordinates}
+                />
                 {errors.location && (
                   <p style={{ color: "#EF4444", fontSize: "0.7rem", marginTop: "4px" }}>{errors.location}</p>
                 )}

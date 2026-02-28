@@ -8,6 +8,7 @@ import { getTimezoneByCoordinates } from "@/app/actions/timezone";
 interface LocationPickerProps {
   value: string;
   onChange: (value: string, timezone?: string, coordinates?: { lat: number; lng: number }) => void;
+  initialCoordinates?: { lat: number; lng: number } | null;
 }
 
 // Google Places Autocomplete types
@@ -250,7 +251,7 @@ function formatReverseGeocodeResult(
   return fallback.trim();
 }
 
-export function LocationPicker({ value, onChange }: LocationPickerProps) {
+export function LocationPicker({ value, onChange, initialCoordinates }: LocationPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState(value);
   const [showMapModal, setShowMapModal] = useState(false);
@@ -258,7 +259,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteServiceRef = useRef<any>(null);
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; name: string } | null>(
+    initialCoordinates ? { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value } : null
+  );
 
   // Load Google Places API on mount
   useEffect(() => {
@@ -276,6 +279,16 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   useEffect(() => {
     setQuery(value);
   }, [value]);
+
+  // Update currentLocation when initialCoordinates or value changes
+  useEffect(() => {
+    if (initialCoordinates) {
+      setCurrentLocation({ lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value });
+    } else {
+      // Keep currentLocation if user has selected something, otherwise null
+      setCurrentLocation(prev => prev?.name === value ? prev : null);
+    }
+  }, [initialCoordinates, value]);
 
   // Fetch predictions from Google Places
   const fetchPredictions = useCallback(async (input: string) => {
@@ -691,6 +704,7 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
   const geocoderRef = useRef<any>(null);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const hasSelectedResultRef = useRef(false); // Ref to track hover preview state
+  const isUserTypingRef = useRef(false); // Track if search change is from user typing (not programmatic)
 
   // Load Google Places script when modal opens
   useEffect(() => {
@@ -790,6 +804,7 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
             lng: initialLocation.lng,
             name: initialLocation.name,
           });
+          isUserTypingRef.current = false;
           setSearch(initialLocation.name);
           hasSelectedResultRef.current = true; // Disable hover preview since we have a selection
         }
@@ -829,11 +844,13 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
                 if (detailStatus === "OK" && detail) {
                   // Use the POI name directly - this is exactly like Google Maps behavior
                   setSelectedLocation({ lat, lng, name: detail.name });
+                  isUserTypingRef.current = false;
                   setSearch(detail.name);
                   hasSelectedResultRef.current = true; // Disable hover preview
                 } else {
                   // Fallback if getDetails fails
                   setSelectedLocation({ lat, lng, name: "Selected Location" });
+                  isUserTypingRef.current = false;
                   setSearch("Selected Location");
                 }
               }
@@ -887,11 +904,13 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
                         // Use POI name directly (like Google Maps behavior)
                         const displayName = detail.name;
                         setSelectedLocation({ lat, lng, name: displayName });
+                        isUserTypingRef.current = false;
                         setSearch(displayName);
                         hasSelectedResultRef.current = true; // Disable hover preview
                       } else {
                         // Fallback to just the name
                         setSelectedLocation({ lat, lng, name: bestPlace.name });
+                        isUserTypingRef.current = false;
                         setSearch(bestPlace.name);
                         hasSelectedResultRef.current = true; // Disable hover preview
                       }
@@ -927,6 +946,7 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
                           geoResults[0].address_components
                         );
                         setSelectedLocation({ lat, lng, name: formattedName });
+                        isUserTypingRef.current = false;
                         setSearch(formattedName);
                       }
                     }
@@ -945,6 +965,7 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
                     results[0].address_components
                   );
                   setSelectedLocation({ lat, lng, name: formattedName });
+                  isUserTypingRef.current = false;
                   setSearch(formattedName);
                 }
               }
@@ -1004,8 +1025,10 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
       return;
     }
 
-    // Re-enable hover preview when user starts a new search
-    hasSelectedResultRef.current = false;
+    // Re-enable hover preview only when user types in search input (not programmatic setSearch)
+    if (isUserTypingRef.current) {
+      hasSelectedResultRef.current = false;
+    }
 
     setIsLoading(true);
     try {
@@ -1165,7 +1188,10 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                isUserTypingRef.current = true;
+                setSearch(e.target.value);
+              }}
               placeholder={isInitializing ? "Loading..." : initError ? "Error loading service" : "Search any place worldwide..."}
               disabled={isInitializing || initError !== null}
               className="w-full pl-10 pr-20 py-2.5 rounded-xl text-sm outline-none"
