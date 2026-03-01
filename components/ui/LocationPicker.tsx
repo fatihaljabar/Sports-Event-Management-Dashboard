@@ -260,14 +260,15 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteServiceRef = useRef<any>(null);
 
-  // Initialize currentLocation with a ref to track the source
-  const initialLocationRef = useRef<{ lat: number; lng: number } | null>(null);
-  initialLocationRef.current = initialCoordinates || null;
+  // Track the actual current location (from initial OR from user selection)
+  const currentLocationRef = useRef<{ lat: number; lng: number; name: string } | null>(null);
 
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; name: string } | null>(() => {
     // Only set initial location if both coordinates AND value are provided
     if (initialCoordinates && value) {
-      return { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
+      const loc = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
+      currentLocationRef.current = loc;
+      return loc;
     }
     return null;
   });
@@ -295,9 +296,7 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
     if (initialCoordinates && initialCoordinates.lat && initialCoordinates.lng) {
       const newLocation = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
       setCurrentLocation(newLocation);
-    } else if (!initialLocationRef.current) {
-      // Only clear if we never had initial coordinates
-      setCurrentLocation(null);
+      currentLocationRef.current = newLocation;
     }
   }, [initialCoordinates?.lat, initialCoordinates?.lng, value]);
 
@@ -391,7 +390,9 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
 
     if (coordinates) {
       // Store current location for map modal
-      setCurrentLocation({ lat: coordinates.lat, lng: coordinates.lng, name: location });
+      const newLocation = { lat: coordinates.lat, lng: coordinates.lng, name: location };
+      setCurrentLocation(newLocation);
+      currentLocationRef.current = newLocation; // Update ref for subsequent modal opens
       // Fetch timezone using coordinates
       const timezone = await getTimezoneFromCoordinates(coordinates.lat, coordinates.lng);
       onChange(location, timezone, coordinates);
@@ -399,6 +400,7 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
       getPlaceDetails(placeId, location);
     } else {
       setCurrentLocation(null);
+      currentLocationRef.current = null; // Clear ref when no coordinates
       const timezone = getTimezoneByLocation(location);
       onChange(location, timezone);
     }
@@ -991,6 +993,53 @@ function LocationModal({ onClose, onSelect, initialLocation }: LocationModalProp
     // Start initialization with delay
     initializeWithDelay();
   }, [hasGooglePlaces]);
+
+  // Update map center when initialLocation prop changes (for subsequent modal opens)
+  useEffect(() => {
+    // Only run this if map is already initialized (not first mount)
+    if (!mapInstanceRef.current || !hasGooglePlaces) {
+      return;
+    }
+
+    // Only proceed if we have a valid initialLocation with coordinates
+    if (!initialLocation || !initialLocation.lat || !initialLocation.lng) {
+      return;
+    }
+
+    // Update map center
+    mapInstanceRef.current.panTo({
+      lat: initialLocation.lat,
+      lng: initialLocation.lng,
+    });
+
+    // Update or create marker
+    if (window.google?.maps?.Marker) {
+      if (markerRef.current) {
+        markerRef.current.setPosition({
+          lat: initialLocation.lat,
+          lng: initialLocation.lng,
+        });
+      } else {
+        markerRef.current = new window.google.maps.Marker({
+          position: { lat: initialLocation.lat, lng: initialLocation.lng },
+          map: mapInstanceRef.current,
+          animation: window.google.maps.Animation.DROP,
+        });
+      }
+    }
+
+    // Update state to reflect the initial location
+    setSelectedLocation({
+      lat: initialLocation.lat,
+      lng: initialLocation.lng,
+      name: initialLocation.name,
+    });
+
+    // Update search input (programmatic update, not user typing)
+    isUserTypingRef.current = false;
+    setSearch(initialLocation.name);
+    hasSelectedResultRef.current = true; // Disable hover preview
+  }, [initialLocation?.lat, initialLocation?.lng, initialLocation?.name, hasGooglePlaces]);
 
   // Update marker position (for external calls)
   const updateMarker = (lat: number, lng: number) => {
