@@ -198,6 +198,20 @@ const SPORT_TEXT: Record<string, string> = {
 };
 
 /* ─────────────────────────────────────────────
+   EVENT STATUS CONFIG
+───────────────────────────────────────────── */
+type EventStatusType = "active" | "inactive" | "upcoming" | "ongoing" | "completed" | "archived";
+
+const EVENT_STATUS_CFG: Record<EventStatusType, { label: string; bg: string; color: string; border: string; dot: string }> = {
+  active:    { label: "Active",     bg: "#DCFCE7", color: "#15803D", border: "#BBF7D0", dot: "#22C55E" },
+  upcoming:  { label: "Upcoming",  bg: "#DBEAFE", color: "#1D4ED8", border: "#BFDBFE", dot: "#3B82F6" },
+  ongoing:   { label: "Ongoing",    bg: "#FEF3C7", color: "#B45309", border: "#FDE68A", dot: "#F59E0B" },
+  completed: { label: "Completed", bg: "#F1F5F9", color: "#64748B", border: "#E2E8F0", dot: "#94A3B8" },
+  inactive:  { label: "Inactive",  bg: "#FEF2F2", color: "#B91C1C", border: "#FECACA", dot: "#EF4444" },
+  archived:  { label: "Archived",   bg: "#F3F4F6", color: "#6B7280", border: "#E5E7EB", dot: "#9CA3AF" },
+};
+
+/* ─────────────────────────────────────────────
    STAT CARD
 ───────────────────────────────────────────── */
 function StatCard({
@@ -411,9 +425,22 @@ function ActionMenu({ keyItem, onRevoke }: { keyItem: SportKey; onRevoke: (id: s
 /* ─────────────────────────────────────────────
    GENERATE KEYS MODAL
 ───────────────────────────────────────────── */
-function GenerateKeysModal({ onClose, eventName }: { onClose: () => void; eventName: string }) {
+function GenerateKeysModal({
+  onClose,
+  eventName,
+  eventSports,
+}: {
+  onClose: () => void;
+  eventName: string;
+  eventSports?: Array<{ id: string; label: string; emoji: string }>;
+}) {
+  // Use event sports if available, otherwise fallback to SPORTS
+  const availableSports = eventSports && eventSports.length > 0
+    ? eventSports.map((s) => ({ name: s.label, emoji: s.emoji }))
+    : SPORTS;
+
   const [qty, setQty] = useState("10");
-  const [selectedSport, setSelectedSport] = useState(SPORTS[0].name);
+  const [selectedSport, setSelectedSport] = useState(availableSports[0]?.name || SPORTS[0].name);
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -515,7 +542,7 @@ function GenerateKeysModal({ onClose, eventName }: { onClose: () => void; eventN
               Assigned Sport
             </label>
             <div className="flex flex-wrap gap-2">
-              {SPORTS.map((s) => (
+              {availableSports.map((s) => (
                 <button
                   key={s.name}
                   onClick={() => setSelectedSport(s.name)}
@@ -757,8 +784,50 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   const eventLogoUrl = event?.logoUrl;
   const eventTotalKeys = event?.totalKeys || 1000;
   const eventIsMulti = event?.type === "multi";
+  const eventStatus = event?.status || "active";
+  const eventStatusCfg = EVENT_STATUS_CFG[eventStatus as EventStatusType] || EVENT_STATUS_CFG.active;
 
-  const [keys, setKeys] = useState<SportKey[]>(MOCK_KEYS);
+  // Generate dynamic keys based on event sports
+  const generateKeysFromEvent = (evt: typeof event): SportKey[] => {
+    if (!evt || !evt.sports || evt.sports.length === 0) {
+      return MOCK_KEYS;
+    }
+
+    const generated: SportKey[] = [];
+    let keyIndex = 1;
+    const formatDate = (date: Date) => {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${months[date.getMonth()]} ${date.getDate()}`;
+    };
+    const now = new Date();
+
+    evt.sports.forEach((sport) => {
+      // Generate 2-4 keys per sport
+      const numKeys = Math.floor(Math.random() * 3) + 2;
+      for (let i = 0; i < numKeys; i++) {
+        const status = Math.random() > 0.5 ? "confirmed" : "available";
+        const hasUser = status === "confirmed";
+        const createdAt = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);
+
+        generated.push({
+          id: `${evt.id}-${sport.id}-${i}`,
+          code: `${evt?.name.substring(0, 2).toUpperCase() || "AG"}${String(now.getFullYear()).slice(2)}-${String(Math.floor(Math.random() * 9000) + 1000)}-${sport.id.toUpperCase()}`,
+          sport: sport.label,
+          sportEmoji: sport.emoji,
+          status: hasUser ? "confirmed" : "available",
+          userEmail: hasUser ? `user${keyIndex}@example.com` : undefined,
+          userName: hasUser ? `User ${keyIndex}` : undefined,
+          userAvatar: hasUser ? AVATAR_BG[keyIndex % AVATAR_BG.length] : undefined,
+          createdAt: formatDate(createdAt),
+        });
+        keyIndex++;
+      }
+    });
+
+    return generated;
+  };
+
+  const [keys, setKeys] = useState<SportKey[]>(event ? generateKeysFromEvent(event) : MOCK_KEYS);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
@@ -837,13 +906,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
                 Event Management
               </span>
               <ChevronRight className="w-3 h-3" style={{ color: "#CBD5E1" }} strokeWidth={2} />
-              <span
-                className="cursor-pointer transition-colors"
-                style={{ color: "#94A3B8" }}
-                onClick={onBack}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLSpanElement).style.color = "#2563EB")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLSpanElement).style.color = "#94A3B8")}
-              >
+              <span style={{ color: "#64748B", fontWeight: 400 }}>
                 {eventDisplayName}
               </span>
               <ChevronRight className="w-3 h-3" style={{ color: "#CBD5E1" }} strokeWidth={2} />
@@ -892,17 +955,25 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
                     >
                       {eventDisplayName}
                     </h1>
-                    {/* Status badge */}
+                    {/* Status badge - dynamic based on event.status */}
                     <div
                       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 flex-shrink-0"
-                      style={{ backgroundColor: "#DCFCE7", border: "1px solid #BBF7D0" }}
+                      style={{
+                        backgroundColor: eventStatusCfg.bg,
+                        border: `1px solid ${eventStatusCfg.border}`,
+                      }}
                     >
                       <div
                         className="rounded-full"
-                        style={{ width: "6px", height: "6px", backgroundColor: "#22C55E", boxShadow: "0 0 5px #22C55E" }}
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          backgroundColor: eventStatusCfg.dot,
+                          boxShadow: eventStatus === "active" || eventStatus === "upcoming" ? `0 0 5px ${eventStatusCfg.dot}` : "none",
+                        }}
                       />
-                      <span style={{ color: "#15803D", fontSize: "0.7rem", fontWeight: 600, fontFamily: '"Inter", sans-serif' }}>
-                        Active
+                      <span style={{ color: eventStatusCfg.color, fontSize: "0.7rem", fontWeight: 600, fontFamily: '"Inter", sans-serif' }}>
+                        {eventStatusCfg.label}
                       </span>
                     </div>
                     {eventIsMulti && (
@@ -1218,7 +1289,11 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
 
       {/* Generate Modal */}
       {showGenerateModal && (
-        <GenerateKeysModal onClose={() => setShowGenerateModal(false)} eventName={eventDisplayName} />
+        <GenerateKeysModal
+          onClose={() => setShowGenerateModal(false)}
+          eventName={eventDisplayName}
+          eventSports={event?.sports}
+        />
       )}
     </main>
   );
