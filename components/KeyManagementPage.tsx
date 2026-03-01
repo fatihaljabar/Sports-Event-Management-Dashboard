@@ -21,9 +21,9 @@ import {
   Hash,
   RefreshCw,
   Zap,
-  Filter,
   AlertCircle,
 } from "lucide-react";
+import { useEvents } from "@/lib/stores/event-store";
 
 /* ─────────────────────────────────────────────
    TYPES
@@ -411,7 +411,7 @@ function ActionMenu({ keyItem, onRevoke }: { keyItem: SportKey; onRevoke: (id: s
 /* ─────────────────────────────────────────────
    GENERATE KEYS MODAL
 ───────────────────────────────────────────── */
-function GenerateKeysModal({ onClose }: { onClose: () => void }) {
+function GenerateKeysModal({ onClose, eventName }: { onClose: () => void; eventName: string }) {
   const [qty, setQty] = useState("10");
   const [selectedSport, setSelectedSport] = useState(SPORTS[0].name);
   const [generating, setGenerating] = useState(false);
@@ -477,7 +477,7 @@ function GenerateKeysModal({ onClose }: { onClose: () => void }) {
                   fontFamily: '"Inter", sans-serif',
                 }}
               >
-                Asian Games 2026
+                {eventName}
               </p>
             </div>
           </div>
@@ -728,8 +728,36 @@ interface KeyManagementPageProps {
 }
 
 export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
-  // TODO: Fetch event data by eventId when backend is ready
-  // For now, using mock data with eventId reference for future implementation
+  const { getEventById } = useEvents();
+
+  // Find event by eventId
+  const event = eventId ? getEventById(eventId) : null;
+
+  const formatRangeDate = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    return `${months[start.getMonth()]} ${start.getDate()} – ${months[end.getMonth()]} ${end.getDate()}, ${start.getFullYear()}`;
+  };
+
+  // Get event emoji from first sport
+  const getEventEmoji = (evt: typeof event) => {
+    return evt?.sports?.[0]?.emoji || "🏆";
+  };
+
+  // Event data to display (fallback to mock if no event found)
+  const eventDisplayName = event?.name || "Asian Games 2026";
+  const eventDisplayLocation = event
+    ? `${event.location.city}${event.location.venue ? `, ${event.location.venue}` : ""}`
+    : "Nagoya, Japan";
+  const eventDisplayDates = event
+    ? formatRangeDate(event.startDate, event.endDate)
+    : "Mar 09 – Mar 22, 2026";
+  const eventEmoji = getEventEmoji(event);
+  const eventLogoUrl = event?.logoUrl;
+  const eventTotalKeys = event?.totalKeys || 1000;
+  const eventIsMulti = event?.type === "multi";
+
   const [keys, setKeys] = useState<SportKey[]>(MOCK_KEYS);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
@@ -754,7 +782,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
     return matchStatus && matchSearch;
   });
 
-  const total = 1000;
+  const total = eventTotalKeys;
   const generated = keys.length;
   const confirmed = keys.filter((k) => k.status === "confirmed").length;
 
@@ -816,7 +844,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
                 onMouseEnter={(e) => ((e.currentTarget as HTMLSpanElement).style.color = "#2563EB")}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLSpanElement).style.color = "#94A3B8")}
               >
-                Asian Games 2026
+                {eventDisplayName}
               </span>
               <ChevronRight className="w-3 h-3" style={{ color: "#CBD5E1" }} strokeWidth={2} />
               <span style={{ color: "#2563EB", fontWeight: 500 }}>Participants & Keys</span>
@@ -833,11 +861,21 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
                   style={{
                     width: "48px",
                     height: "48px",
-                    background: "linear-gradient(135deg,#2563EB,#7C3AED)",
+                    background: eventLogoUrl
+                      ? "transparent"
+                      : "linear-gradient(135deg,#2563EB,#7C3AED)",
                     boxShadow: "0 4px 16px rgba(37,99,235,0.3)",
                   }}
                 >
-                  <span style={{ fontSize: "1.4rem" }}>🏆</span>
+                  {eventLogoUrl ? (
+                    <img
+                      src={eventLogoUrl}
+                      alt={eventDisplayName}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px" }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: "1.4rem" }}>{eventEmoji}</span>
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -852,7 +890,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
                         lineHeight: 1,
                       }}
                     >
-                      Asian Games 2026
+                      {eventDisplayName}
                     </h1>
                     {/* Status badge */}
                     <div
@@ -867,28 +905,30 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
                         Active
                       </span>
                     </div>
-                    <div
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 flex-shrink-0"
-                      style={{ backgroundColor: "#EDE9FE", border: "1px solid #DDD6FE" }}
-                    >
-                      <Layers className="w-3 h-3" strokeWidth={1.75} style={{ color: "#7C3AED" }} />
-                      <span style={{ color: "#5B21B6", fontSize: "0.7rem", fontWeight: 600, fontFamily: '"Inter", sans-serif' }}>
-                        Multi-Event
-                      </span>
-                    </div>
+                    {eventIsMulti && (
+                      <div
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 flex-shrink-0"
+                        style={{ backgroundColor: "#EDE9FE", border: "1px solid #DDD6FE" }}
+                      >
+                        <Layers className="w-3 h-3" strokeWidth={1.75} style={{ color: "#7C3AED" }} />
+                        <span style={{ color: "#5B21B6", fontSize: "0.7rem", fontWeight: 600, fontFamily: '"Inter", sans-serif' }}>
+                          Multi-Event
+                        </span>
+                      </div>
+                    )}
                   </div>
                   {/* Meta */}
                   <div className="flex items-center gap-4 mt-1.5">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5" strokeWidth={1.75} style={{ color: "#94A3B8" }} />
                       <span style={{ color: "#64748B", fontSize: "0.78rem", fontFamily: '"Inter", sans-serif' }}>
-                        Mar 09 – Mar 22, 2026
+                        {eventDisplayDates}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5" strokeWidth={1.75} style={{ color: "#94A3B8" }} />
                       <span style={{ color: "#64748B", fontSize: "0.78rem", fontFamily: '"Inter", sans-serif' }}>
-                        Nagoya, Japan
+                        {eventDisplayLocation}
                       </span>
                     </div>
                   </div>
@@ -1178,7 +1218,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
 
       {/* Generate Modal */}
       {showGenerateModal && (
-        <GenerateKeysModal onClose={() => setShowGenerateModal(false)} />
+        <GenerateKeysModal onClose={() => setShowGenerateModal(false)} eventName={eventDisplayName} />
       )}
     </main>
   );
