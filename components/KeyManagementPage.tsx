@@ -43,18 +43,8 @@ interface SportKey {
 }
 
 /* ─────────────────────────────────────────────
-   MOCK DATA
+   UTILITIES
 ───────────────────────────────────────────── */
-const SPORTS = [
-  { name: "Athletics", emoji: "🏃", color: "#F59E0B" },
-  { name: "Swimming", emoji: "🏊", color: "#0EA5E9" },
-  { name: "Climbing", emoji: "🧗", color: "#84CC16" },
-  { name: "Judo", emoji: "🥋", color: "#7C3AED" },
-  { name: "Cycling", emoji: "🚴", color: "#EF4444" },
-  { name: "Boxing", emoji: "🥊", color: "#F97316" },
-  { name: "Gymnastics", emoji: "🤸", color: "#EC4899" },
-];
-
 function avatarInitials(email: string): string {
   const parts = email.split("@")[0].split(/[._-]/);
   return (parts[0]?.[0] ?? "?").toUpperCase() + (parts[1]?.[0] ?? parts[0]?.[1] ?? "").toUpperCase();
@@ -66,107 +56,6 @@ const AVATAR_BG = [
   "linear-gradient(135deg,#F59E0B,#EF4444)",
   "linear-gradient(135deg,#0EA5E9,#6366F1)",
   "linear-gradient(135deg,#EC4899,#8B5CF6)",
-];
-
-const MOCK_KEYS: SportKey[] = [
-  {
-    id: "1",
-    code: "AG26-12345-ASD",
-    sport: "Athletics",
-    sportEmoji: "🏃",
-    status: "available",
-    createdAt: "24 Feb 2026",
-  },
-  {
-    id: "2",
-    code: "AG26-8823-BKT",
-    sport: "Swimming",
-    sportEmoji: "🏊",
-    status: "confirmed",
-    userEmail: "ahmad.reza@gmail.com",
-    userName: "Ahmad Reza",
-    userAvatar: AVATAR_BG[0],
-    createdAt: "22 Feb 2026",
-  },
-  {
-    id: "3",
-    code: "AG26-21424-DBF",
-    sport: "Climbing",
-    sportEmoji: "🧗",
-    status: "confirmed",
-    userEmail: "uvwx@gmail.com",
-    userName: "U. Vwx",
-    userAvatar: AVATAR_BG[1],
-    createdAt: "21 Feb 2026",
-  },
-  {
-    id: "4",
-    code: "AG26-5571-GQR",
-    sport: "Athletics",
-    sportEmoji: "🏃",
-    status: "revoked",
-    userEmail: "banned.user@email.com",
-    userName: "Banned User",
-    userAvatar: AVATAR_BG[2],
-    createdAt: "18 Feb 2026",
-  },
-  {
-    id: "5",
-    code: "AG26-3301-KPM",
-    sport: "Judo",
-    sportEmoji: "🥋",
-    status: "available",
-    createdAt: "24 Feb 2026",
-  },
-  {
-    id: "6",
-    code: "AG26-7744-NXZ",
-    sport: "Swimming",
-    sportEmoji: "🏊",
-    status: "confirmed",
-    userEmail: "yuki.tanaka@yahoo.jp",
-    userName: "Yuki Tanaka",
-    userAvatar: AVATAR_BG[3],
-    createdAt: "20 Feb 2026",
-  },
-  {
-    id: "7",
-    code: "AG26-9182-HFW",
-    sport: "Cycling",
-    sportEmoji: "🚴",
-    status: "available",
-    createdAt: "23 Feb 2026",
-  },
-  {
-    id: "8",
-    code: "AG26-4423-VSP",
-    sport: "Boxing",
-    sportEmoji: "🥊",
-    status: "confirmed",
-    userEmail: "carlos.m@sport.id",
-    userName: "Carlos M.",
-    userAvatar: AVATAR_BG[4],
-    createdAt: "19 Feb 2026",
-  },
-  {
-    id: "9",
-    code: "AG26-6601-RTN",
-    sport: "Gymnastics",
-    sportEmoji: "🤸",
-    status: "available",
-    createdAt: "24 Feb 2026",
-  },
-  {
-    id: "10",
-    code: "AG26-0019-QWE",
-    sport: "Judo",
-    sportEmoji: "🥋",
-    status: "revoked",
-    userEmail: "prev.user@sport.org",
-    userName: "Prev User",
-    userAvatar: AVATAR_BG[1],
-    createdAt: "15 Feb 2026",
-  },
 ];
 
 /* ─────────────────────────────────────────────
@@ -434,13 +323,13 @@ function GenerateKeysModal({
   eventName: string;
   eventSports?: Array<{ id: string; label: string; emoji: string }>;
 }) {
-  // Use event sports if available, otherwise fallback to SPORTS
+  // Use event sports if available, otherwise show empty state
   const availableSports = eventSports && eventSports.length > 0
     ? eventSports.map((s) => ({ name: s.label, emoji: s.emoji }))
-    : SPORTS;
+    : [];
 
   const [qty, setQty] = useState("10");
-  const [selectedSport, setSelectedSport] = useState(availableSports[0]?.name || SPORTS[0].name);
+  const [selectedSport, setSelectedSport] = useState(availableSports[0]?.name || "");
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -541,26 +430,41 @@ function GenerateKeysModal({
             >
               Assigned Sport
             </label>
-            <div className="flex flex-wrap gap-2">
-              {availableSports.map((s) => (
-                <button
-                  key={s.name}
-                  onClick={() => setSelectedSport(s.name)}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-all"
-                  style={{
-                    border: `1.5px solid ${selectedSport === s.name ? "#2563EB" : "#E2E8F0"}`,
-                    backgroundColor: selectedSport === s.name ? "#EFF6FF" : "#FAFBFC",
-                    color: selectedSport === s.name ? "#1D4ED8" : "#64748B",
-                    fontSize: "0.78rem",
-                    fontFamily: '"Inter", sans-serif',
-                    fontWeight: selectedSport === s.name ? 600 : 400,
-                  }}
-                >
-                  <span>{s.emoji}</span>
-                  {s.name}
-                </button>
-              ))}
-            </div>
+            {availableSports.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {availableSports.map((s) => (
+                  <button
+                    key={s.name}
+                    onClick={() => setSelectedSport(s.name)}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-all"
+                    style={{
+                      border: `1.5px solid ${selectedSport === s.name ? "#2563EB" : "#E2E8F0"}`,
+                      backgroundColor: selectedSport === s.name ? "#EFF6FF" : "#FAFBFC",
+                      color: selectedSport === s.name ? "#1D4ED8" : "#64748B",
+                      fontSize: "0.78rem",
+                      fontFamily: '"Inter", sans-serif',
+                      fontWeight: selectedSport === s.name ? 600 : 400,
+                    }}
+                  >
+                    <span>{s.emoji}</span>
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="rounded-lg px-3 py-2"
+                style={{
+                  backgroundColor: "#FEF2F2",
+                  border: "1px solid #FECACA",
+                  color: "#B91C1C",
+                  fontSize: "0.75rem",
+                  fontFamily: '"Inter", sans-serif',
+                }}
+              >
+                No sports available for this event
+              </div>
+            )}
           </div>
 
           {/* Quantity */}
@@ -787,47 +691,9 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   const eventStatus = event?.status || "active";
   const eventStatusCfg = EVENT_STATUS_CFG[eventStatus as EventStatusType] || EVENT_STATUS_CFG.active;
 
-  // Generate dynamic keys based on event sports
-  const generateKeysFromEvent = (evt: typeof event): SportKey[] => {
-    if (!evt || !evt.sports || evt.sports.length === 0) {
-      return MOCK_KEYS;
-    }
-
-    const generated: SportKey[] = [];
-    let keyIndex = 1;
-    const formatDate = (date: Date) => {
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      return `${months[date.getMonth()]} ${date.getDate()}`;
-    };
-    const now = new Date();
-
-    evt.sports.forEach((sport) => {
-      // Generate 2-4 keys per sport
-      const numKeys = Math.floor(Math.random() * 3) + 2;
-      for (let i = 0; i < numKeys; i++) {
-        const status = Math.random() > 0.5 ? "confirmed" : "available";
-        const hasUser = status === "confirmed";
-        const createdAt = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000);
-
-        generated.push({
-          id: `${evt.id}-${sport.id}-${i}`,
-          code: `${evt?.name.substring(0, 2).toUpperCase() || "AG"}${String(now.getFullYear()).slice(2)}-${String(Math.floor(Math.random() * 9000) + 1000)}-${sport.id.toUpperCase()}`,
-          sport: sport.label,
-          sportEmoji: sport.emoji,
-          status: hasUser ? "confirmed" : "available",
-          userEmail: hasUser ? `user${keyIndex}@example.com` : undefined,
-          userName: hasUser ? `User ${keyIndex}` : undefined,
-          userAvatar: hasUser ? AVATAR_BG[keyIndex % AVATAR_BG.length] : undefined,
-          createdAt: formatDate(createdAt),
-        });
-        keyIndex++;
-      }
-    });
-
-    return generated;
-  };
-
-  const [keys, setKeys] = useState<SportKey[]>(event ? generateKeysFromEvent(event) : MOCK_KEYS);
+  // Keys state - will be populated from database in the future
+  // For now, empty until admin generates keys
+  const [keys, setKeys] = useState<SportKey[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
