@@ -285,6 +285,19 @@ export async function generateKeys(data: GenerateKeysData): Promise<GenerateKeys
       data: keysToCreate,
     });
 
+    // Update event's totalKeys count
+    const currentEvent = await prisma.sportEvent.findUnique({
+      where: { eventId: data.eventId },
+      select: { totalKeys: true },
+    });
+
+    await prisma.sportEvent.update({
+      where: { eventId: data.eventId },
+      data: {
+        totalKeys: (currentEvent?.totalKeys || 0) + data.quantity,
+      },
+    });
+
     // Revalidate cache
     revalidatePath("/events");
     revalidatePath(`/events/${data.eventId}`);
@@ -467,9 +480,31 @@ export async function deleteKey(keyId: string): Promise<DeleteKeyResult> {
       return { success: false, error: GENERIC_ERROR_MESSAGES.INVALID_INPUT };
     }
 
+    // Get the key first to retrieve eventId
+    const key = await prisma.accessKey.findUnique({
+      where: { id: keyId },
+      select: { eventId: true },
+    });
+
+    // Delete the key
     await prisma.accessKey.delete({
       where: { id: keyId },
     });
+
+    // Decrement event's totalKeys
+    if (key) {
+      const currentEvent = await prisma.sportEvent.findUnique({
+        where: { eventId: key.eventId },
+        select: { totalKeys: true },
+      });
+
+      await prisma.sportEvent.update({
+        where: { eventId: key.eventId },
+        data: {
+          totalKeys: Math.max(0, (currentEvent?.totalKeys || 0) - 1),
+        },
+      });
+    }
 
     revalidatePath("/events");
 

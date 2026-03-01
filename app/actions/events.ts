@@ -430,8 +430,9 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
       return { success: false, error: "End date must be after start date" };
     }
 
-    if (data.maxParticipants < 1 || data.maxParticipants > 1000000) {
-      return { success: false, error: "Max participants must be between 1 and 1,000,000" };
+    // Max participants can be 0 when keys are manually generated
+    if (data.maxParticipants < 0 || data.maxParticipants > 1000000) {
+      return { success: false, error: "Max participants must be between 0 and 1,000,000" };
     }
 
     if (data.sports.length === 0 || data.sports.length > 50) {
@@ -689,10 +690,11 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
       }
     }
 
-    // Delete event from database
+    // Delete event from database (cascade delete will remove associated access keys)
     await prisma.sportEvent.delete({
       where: { eventId },
     });
+    devLog.log("Deleted event and associated access keys:", eventId);
 
     revalidatePath("/");
     revalidatePath("/dashboard");
@@ -776,8 +778,9 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
       return { success: false, error: "End date must be after start date" };
     }
 
-    if (data.maxParticipants < 1 || data.maxParticipants > 1000000) {
-      return { success: false, error: "Max participants must be between 1 and 1,000,000" };
+    // Max participants can be 0 when keys are manually generated
+    if (data.maxParticipants < 0 || data.maxParticipants > 1000000) {
+      return { success: false, error: "Max participants must be between 0 and 1,000,000" };
     }
 
     if (data.sports.length === 0 || data.sports.length > 50) {

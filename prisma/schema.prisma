@@ -28,6 +28,7 @@ model SportEvent {
   updatedAt        DateTime @updatedAt
   logoUrl          String?
   sponsorLogos     Json?    // Array of { name, url } objects
+  accessKeys       AccessKey[]
 
   @@map("sport_events")
 }
@@ -61,6 +62,7 @@ model AccessKey {
   claimedById String?   // UUID of user who claimed this key
   claimedAt   DateTime?
   createdAt   DateTime  @default(now())
+  event       SportEvent @relation(fields: [eventId], references: [eventId], onDelete: Cascade, onUpdate: Cascade)
 
   @@map("access_keys")
 }

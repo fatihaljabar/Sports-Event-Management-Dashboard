@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import type { SportEvent } from "@/lib/types/event";
 import { getEvents as fetchEvents } from "@/app/actions/events";
 
@@ -19,13 +19,28 @@ interface EventContextType {
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
 
+// Auto-refresh interval: every 10 seconds
+const AUTO_REFRESH_INTERVAL = 10000;
+
 export function EventProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isAutoRefreshEnabled = useRef(true);
 
   // Load events from database on mount
   useEffect(() => {
     loadEvents();
+  }, []);
+
+  // Auto-refresh events every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (isAutoRefreshEnabled.current) {
+        await loadEvents();
+      }
+    }, AUTO_REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
   }, []);
 
   const loadEvents = async () => {
