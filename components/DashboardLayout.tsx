@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { TopHeader } from "@/components/TopHeader";
 import { ScoreboardCards } from "@/components/ScoreboardCards";
@@ -9,28 +10,22 @@ import { MedalTally } from "@/components/MedalTally";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { CreateEventModal } from "@/components/CreateEventModal";
-import { EventManagementPage } from "@/components/event-management";
-import { KeyManagementPage } from "@/components/KeyManagementPage";
 import { ParticipantsPage } from "@/components/ParticipantsPage";
 import { CompetitionResultsPage } from "@/components/CompetitionResultsPage";
 import { MedalStandingsPage } from "@/components/MedalStandingsPage";
 
 export function DashboardLayout() {
+  const router = useRouter();
   const [activeNav, setActiveNav] = useState("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const handleNavChange = (id: string) => {
+    if (id === "events") {
+      // Navigate to proper Next.js route for events
+      router.push("/events");
+      return;
+    }
     setActiveNav(id);
-    setSelectedEventId(null);
-  };
-
-  const handleEventClick = (eventId: string) => {
-    setSelectedEventId(eventId);
-  };
-
-  const handleBackToEvents = () => {
-    setSelectedEventId(null);
   };
 
   return (
@@ -50,16 +45,7 @@ export function DashboardLayout() {
         <TopHeader onCreateEvent={() => setShowCreateModal(true)} />
 
         {/* Page Content */}
-        {activeNav === "events" ? (
-          selectedEventId ? (
-            <KeyManagementPage onBack={handleBackToEvents} />
-          ) : (
-            <EventManagementPage
-              onCreateEvent={() => setShowCreateModal(true)}
-              onEventClick={handleEventClick}
-            />
-          )
-        ) : activeNav === "participants" ? (
+        {activeNav === "participants" ? (
           <ParticipantsPage />
         ) : activeNav === "results" ? (
           <CompetitionResultsPage />
