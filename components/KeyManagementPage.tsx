@@ -795,7 +795,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
         setKeys((prev) =>
           prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
         );
-        toast("Key revoked successfully", {
+        toast.error("Key revoked successfully", {
           description: "The access key has been revoked.",
           icon: <ShieldOff className="w-5 h-5" />,
           className: "revoke-toast",
@@ -819,7 +819,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
         setKeys((prev) =>
           prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
         );
-        toast("Key restored successfully", {
+        toast.success("Key restored successfully", {
           description: "The access key has been restored to available.",
           icon: <RotateCcw className="w-5 h-5" />,
           className: "restore-toast",
