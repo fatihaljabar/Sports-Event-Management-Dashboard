@@ -42,3 +42,25 @@ enum EventStatus {
   ONGOING
   COMPLETED
 }
+
+enum KeyStatus {
+  AVAILABLE
+  CLAIMED
+  ACTIVE
+  REVOKED
+}
+
+model AccessKey {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  eventId     String
+  sportId     String
+  sportName   String
+  sportEmoji  String
+  status      KeyStatus @default(AVAILABLE)
+  claimedById String?   // UUID of user who claimed this key
+  claimedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("access_keys")
+}

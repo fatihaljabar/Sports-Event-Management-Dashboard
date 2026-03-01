@@ -245,6 +245,56 @@
   fill: none !important;
 }
 
+/* Revoke toast - merah soft */
+[data-sonner-toast].revoke-toast {
+  background: #fee2e2 !important;
+  border-color: #fecaca !important;
+  color: #dc2626 !important;
+}
+
+[data-sonner-toast].revoke-toast [data-title] {
+  color: #dc2626 !important;
+}
+
+[data-sonner-toast].revoke-toast [data-description] {
+  color: #991b1b !important;
+}
+
+[data-sonner-toast].revoke-toast svg {
+  color: #dc2626 !important;
+  stroke: #dc2626 !important;
+}
+
+[data-sonner-toast].revoke-toast svg * {
+  stroke: #dc2626 !important;
+  fill: none !important;
+}
+
+/* Restore toast - hijau soft */
+[data-sonner-toast].restore-toast {
+  background: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+  color: #15803d !important;
+}
+
+[data-sonner-toast].restore-toast [data-title] {
+  color: #15803d !important;
+}
+
+[data-sonner-toast].restore-toast [data-description] {
+  color: #166534 !important;
+}
+
+[data-sonner-toast].restore-toast svg {
+  color: #22c55e !important;
+  stroke: #22c55e !important;
+}
+
+[data-sonner-toast].restore-toast svg * {
+  stroke: #22c55e !important;
+  fill: none !important;
+}
+
 /* Unarchive/Restore toast - hijau soft */
 [data-sonner-toast].unarchive-toast {
   background: #f0fdf4 !important;

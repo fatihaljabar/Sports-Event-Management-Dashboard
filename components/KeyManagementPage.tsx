@@ -11,6 +11,7 @@ import {
   MoreVertical,
   Mail,
   ShieldOff,
+  RotateCcw,
   Trash2,
   Users,
   KeyRound,
@@ -24,13 +25,15 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
+import { generateKeys, getKeysByEvent, revokeKey, restoreKey, deleteKey } from "@/app/actions/keys";
+import { toast } from "sonner";
 
 /* ─────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────── */
-type KeyStatus = "available" | "confirmed" | "revoked";
+export type KeyStatus = "available" | "confirmed" | "revoked";
 
-interface SportKey {
+export interface SportKey {
   id: string;
   code: string;
   sport: string;
@@ -218,7 +221,7 @@ function CopyButton({ text }: { text: string }) {
 /* ─────────────────────────────────────────────
    THREE-DOT MENU
 ───────────────────────────────────────────── */
-function ActionMenu({ keyItem, onRevoke }: { keyItem: SportKey; onRevoke: (id: string) => void }) {
+function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: { keyItem: SportKey; onRevoke: (id: string) => void; onRestore: (id: string) => void; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -234,10 +237,13 @@ function ActionMenu({ keyItem, onRevoke }: { keyItem: SportKey; onRevoke: (id: s
     ...(keyItem.status === "confirmed"
       ? [{ icon: <Mail className="w-3.5 h-3.5" />, label: "Resend Email", color: "#374151" }]
       : []),
+    ...(keyItem.status === "revoked"
+      ? [{ icon: <RotateCcw className="w-3.5 h-3.5" />, label: "Restore Key", color: "#059669", action: () => onRestore(keyItem.id) }]
+      : []),
     ...(keyItem.status !== "revoked"
       ? [{ icon: <ShieldOff className="w-3.5 h-3.5" />, label: "Revoke Key", color: "#EF4444", action: () => onRevoke(keyItem.id) }]
       : []),
-    { icon: <Trash2 className="w-3.5 h-3.5" />, label: "Delete Key", color: "#EF4444" },
+    { icon: <Trash2 className="w-3.5 h-3.5" />, label: "Delete Key", color: "#EF4444", action: () => onDelete(keyItem.id) },
   ];
 
   return (
@@ -317,15 +323,19 @@ function ActionMenu({ keyItem, onRevoke }: { keyItem: SportKey; onRevoke: (id: s
 function GenerateKeysModal({
   onClose,
   eventName,
+  eventId,
   eventSports,
+  onKeysGenerated,
 }: {
   onClose: () => void;
   eventName: string;
+  eventId: string;
   eventSports?: Array<{ id: string; label: string; emoji: string }>;
+  onKeysGenerated: () => void;
 }) {
   // Use event sports if available, otherwise show empty state
   const availableSports = eventSports && eventSports.length > 0
-    ? eventSports.map((s) => ({ name: s.label, emoji: s.emoji }))
+    ? eventSports.map((s) => ({ name: s.label, emoji: s.emoji, id: s.id }))
     : [];
 
   const [qty, setQty] = useState("10");
@@ -333,13 +343,38 @@ function GenerateKeysModal({
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!selectedSport) return;
+
+    const sport = availableSports.find((s) => s.name === selectedSport);
+    if (!sport) return;
+
     setGenerating(true);
-    setTimeout(() => {
+    try {
+      const result = await generateKeys({
+        eventId,
+        sportId: sport.id,
+        sportName: sport.name,
+        sportEmoji: sport.emoji,
+        quantity: parseInt(qty) || 10,
+      });
+
+      if (result.success) {
+        setDone(true);
+        onKeysGenerated();
+        setTimeout(() => onClose(), 1200);
+      } else {
+        toast.error("Failed to generate keys", {
+          description: result.error || "Please try again.",
+        });
+        setGenerating(false);
+      }
+    } catch (error) {
+      toast.error("An error occurred", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
       setGenerating(false);
-      setDone(true);
-      setTimeout(() => onClose(), 1200);
-    }, 1600);
+    }
   };
 
   return (
@@ -691,18 +726,136 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   const eventStatus = event?.status || "active";
   const eventStatusCfg = EVENT_STATUS_CFG[eventStatus as EventStatusType] || EVENT_STATUS_CFG.active;
 
-  // Keys state - will be populated from database in the future
-  // For now, empty until admin generates keys
+  // Keys state - fetch from database
   const [keys, setKeys] = useState<SportKey[]>([]);
+  const [isLoadingKeys, setIsLoadingKeys] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
 
-  const handleRevoke = (id: string) => {
-    setKeys((prev) =>
-      prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
-    );
+  // Transform database AccessKey to SportKey format
+  const transformAccessKeyToSportKey = (accessKey: {
+    id: string;
+    code: string;
+    sportName: string;
+    sportEmoji: string;
+    status: KeyStatus;
+    claimedById: string | null;
+    createdAt: Date;
+  }): SportKey => {
+    const formatDate = (date: Date) => {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${months[date.getMonth()]} ${date.getDate()}`;
+    };
+
+    return {
+      id: accessKey.id,
+      code: accessKey.code,
+      sport: accessKey.sportName,
+      sportEmoji: accessKey.sportEmoji,
+      status: accessKey.status,
+      // User info (will be populated when user claims key)
+      userEmail: undefined,
+      userName: undefined,
+      userAvatar: undefined,
+      createdAt: formatDate(accessKey.createdAt),
+    };
+  };
+
+  // Fetch keys from database when event changes
+  useEffect(() => {
+    if (event?.id) {
+      fetchKeys();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id]);
+
+  const fetchKeys = async () => {
+    if (!event?.id) return;
+
+    setIsLoadingKeys(true);
+    try {
+      const result = await getKeysByEvent(event.id);
+      if (result.success && result.keys) {
+        const transformedKeys = result.keys.map(transformAccessKeyToSportKey);
+        setKeys(transformedKeys);
+      }
+    } catch (error) {
+      console.error("Failed to fetch keys:", error);
+    } finally {
+      setIsLoadingKeys(false);
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    try {
+      const result = await revokeKey(id);
+      if (result.success) {
+        setKeys((prev) =>
+          prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
+        );
+        toast("Key revoked successfully", {
+          description: "The access key has been revoked.",
+          icon: <ShieldOff className="w-5 h-5" />,
+          className: "revoke-toast",
+        });
+      } else {
+        toast.error("Failed to revoke key", {
+          description: result.error || "Please try again.",
+        });
+      }
+    } catch (error) {
+      toast.error("An error occurred", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const result = await restoreKey(id);
+      if (result.success) {
+        setKeys((prev) =>
+          prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
+        );
+        toast("Key restored successfully", {
+          description: "The access key has been restored to available.",
+          icon: <RotateCcw className="w-5 h-5" />,
+          className: "restore-toast",
+        });
+      } else {
+        toast.error("Failed to restore key", {
+          description: result.error || "Please try again.",
+        });
+      }
+    } catch (error) {
+      toast.error("An error occurred", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const result = await deleteKey(id);
+      if (result.success) {
+        setKeys((prev) => prev.filter((k) => k.id !== id));
+        toast("Key deleted successfully", {
+          description: "The access key has been permanently deleted.",
+          icon: <Trash2 className="w-5 h-5" />,
+          className: "delete-toast",
+        });
+      } else {
+        toast.error("Failed to delete key", {
+          description: result.error || "Please try again.",
+        });
+      }
+    } catch (error) {
+      toast.error("An error occurred", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   const filtered = keys.filter((k) => {
@@ -1109,6 +1262,8 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
                       hovered={hoveredRow === key.id}
                       onHover={setHoveredRow}
                       onRevoke={handleRevoke}
+                      onRestore={handleRestore}
+                      onDelete={handleDelete}
                     />
                   ))
                 )}
@@ -1158,7 +1313,9 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
         <GenerateKeysModal
           onClose={() => setShowGenerateModal(false)}
           eventName={eventDisplayName}
+          eventId={event?.id || ""}
           eventSports={event?.sports}
+          onKeysGenerated={fetchKeys}
         />
       )}
     </main>
@@ -1175,6 +1332,8 @@ function KeyRow({
   hovered,
   onHover,
   onRevoke,
+  onRestore,
+  onDelete,
 }: {
   idx: number;
   keyItem: SportKey;
@@ -1182,6 +1341,8 @@ function KeyRow({
   hovered: boolean;
   onHover: (id: string | null) => void;
   onRevoke: (id: string) => void;
+  onRestore: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const isZebra = idx % 2 !== 0;
   const status = STATUS_CFG[keyItem.status];
@@ -1414,7 +1575,7 @@ function KeyRow({
 
       {/* Actions */}
       <td style={{ padding: "14px 20px", textAlign: "center" }}>
-        <ActionMenu keyItem={keyItem} onRevoke={onRevoke} />
+        <ActionMenu keyItem={keyItem} onRevoke={onRevoke} onRestore={onRestore} onDelete={onDelete} />
       </td>
     </tr>
   );
