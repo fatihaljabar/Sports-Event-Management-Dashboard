@@ -1,6 +1,6 @@
 "use client";
 
-import { Trophy, X, Calendar, Users, Globe, AlertCircle, ImagePlus } from "lucide-react";
+import { Trophy, X, Calendar, Globe, ImagePlus } from "lucide-react";
 import { useCreateEventForm } from "@/hooks/useCreateEventForm";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { StyledInput } from "@/components/ui/StyledInput";
@@ -30,8 +30,6 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
     setStartDate,
     endDate,
     setEndDate,
-    quota,
-    setQuota,
     visibility,
     setVisibility,
     eventLogo,
@@ -127,7 +125,6 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
               location={location}
               startDate={startDate}
               endDate={endDate}
-              quota={quota}
               eventLogo={eventLogo}
             />
 
@@ -301,61 +298,6 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
                 />
                 {/* Dynamic timezone alert */}
                 {timezone && <TimezoneAlert timezone={timezone} />}
-              </div>
-
-              {/* Participant Quota */}
-              <div>
-                <FieldLabel required>Max Participants / Keys</FieldLabel>
-                <StyledInput
-                  value={quota}
-                  onChange={setQuota}
-                  placeholder="e.g. 1000"
-                  icon={<Users className="w-4 h-4" strokeWidth={1.75} />}
-                />
-                {errors.quota && (
-                  <p style={{ color: "#EF4444", fontSize: "0.7rem", marginTop: "4px" }}>{errors.quota}</p>
-                )}
-                {/* Key calculation info */}
-                {quota && selectedSports.length > 0 && (
-                  <div
-                    className="flex items-center gap-2 mt-2 rounded-lg px-3 py-2"
-                    style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE" }}
-                  >
-                    <Users className="w-3.5 h-3.5" strokeWidth={1.75} style={{ color: "#2563EB" }} />
-                    <span
-                      style={{
-                        color: "#1E40AF",
-                        fontSize: "0.7rem",
-                        fontFamily: '"Inter", sans-serif',
-                        fontWeight: 500,
-                      }}
-                    >
-                      Total keys: {parseInt(quota) * selectedSports.length} keys
-                    </span>
-                    <span
-                      style={{
-                        color: "#64748B",
-                        fontSize: "0.65rem",
-                        fontFamily: '"Inter", sans-serif',
-                      }}
-                    >
-                      ({quota} participants × {selectedSports.length} sport{selectedSports.length > 1 ? "s" : ""})
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Alert note */}
-              <div
-                className="flex items-start gap-2.5 rounded-xl p-3"
-                style={{ backgroundColor: "#FFFBEB", border: "1px solid #FDE68A" }}
-              >
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} style={{ color: "#D97706" }} />
-                <p style={{ color: "#92400E", fontSize: "0.72rem", fontFamily: '"Inter", sans-serif', lineHeight: 1.5 }}>
-                  Access keys will be auto-generated upon event creation. Each participant receives a unique{" "}
-                  <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}>KEY-XXXX</span>{" "}
-                  credential tied to this event.
-                </p>
               </div>
 
               <SectionDivider label="Branding Assets" />

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useEvents } from "@/lib/stores/event-store";
-import { calculateTotalKeys, getTimezoneByLocation, getSportsByIds } from "@/lib/utils/create-event-helpers";
+import { getTimezoneByLocation, getSportsByIds } from "@/lib/utils/create-event-helpers";
 import { validateCreateEventData, clearError } from "@/lib/utils/create-event-validation";
 import { createEvent } from "@/app/actions/events";
 import type { UploadedFile } from "@/components/ui/SponsorLogosUploader";
@@ -23,7 +23,6 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
   const [timezone, setTimezone] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [quota, setQuota] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [eventLogo, setEventLogo] = useState<UploadedFile | null>(null);
   const [sponsorLogos, setSponsorLogos] = useState<UploadedFile[]>([]);
@@ -121,13 +120,12 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
       location,
       startDate,
       endDate,
-      quota,
       eventLogo: eventLogoFile,
     });
 
     setErrors(result.errors);
     return result.isValid;
-  }, [eventName, eventType, selectedSports, location, startDate, endDate, quota, eventLogo]);
+  }, [eventName, eventType, selectedSports, location, startDate, endDate, eventLogo]);
 
   // Handle form submission with Server Action
   const handleCreateEvent = useCallback(async () => {
@@ -164,8 +162,8 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
         locationTimezone: timezone || "Asia/Bangkok (GMT+7)",
         startDate,
         endDate,
-        maxParticipants: parseInt(quota),
-        totalKeys: calculateTotalKeys(parseInt(quota), selectedSports.length),
+        maxParticipants: 0,
+        totalKeys: 0,
         visibility,
         logoBase64,
         logoFileName,
@@ -194,7 +192,7 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, quota, visibility, eventLogo, sponsorLogos, addEvent, onClose, validateForm]);
+  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, visibility, eventLogo, sponsorLogos, addEvent, onClose, validateForm]);
 
   // Reset form
   const resetForm = useCallback(() => {
@@ -205,7 +203,6 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     setTimezone("");
     setStartDate("");
     setEndDate("");
-    setQuota("");
     setVisibility("public");
     setEventLogo(null);
     setSponsorLogos([]);
@@ -225,8 +222,6 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     setStartDate,
     endDate,
     setEndDate,
-    quota,
-    setQuota,
     visibility,
     setVisibility,
     eventLogo,

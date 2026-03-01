@@ -7,7 +7,6 @@ interface CreateEventStepperProps {
   location: string;
   startDate: string;
   endDate: string;
-  quota: string;
   eventLogo: unknown | null;
 }
 
@@ -18,14 +17,13 @@ export function CreateEventStepper({
   location,
   startDate,
   endDate,
-  quota,
   eventLogo,
 }: CreateEventStepperProps) {
   // Event Details - check if basic info is filled
   const isEventDetailsComplete = !!eventName && !!eventType && selectedSports.length > 0;
 
-  // Logistics - check if location, dates, and quota are filled
-  const isLogisticsComplete = !!location && !!startDate && !!endDate && !!quota;
+  // Logistics - check if location and dates are filled
+  const isLogisticsComplete = !!location && !!startDate && !!endDate;
 
   // Assets - check if logo is uploaded
   const isAssetsComplete = !!eventLogo;

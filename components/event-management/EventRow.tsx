@@ -454,6 +454,25 @@ interface KeyUsageDisplayProps {
 }
 
 function KeyUsageDisplay({ usedKeys, totalKeys }: KeyUsageDisplayProps) {
+  // Keys not generated yet
+  if (totalKeys === 0) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <KeyRound className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} style={{ color: "#94A3B8" }} />
+        <span
+          style={{
+            color: "#94A3B8",
+            fontSize: "0.72rem",
+            fontWeight: 500,
+          }}
+        >
+          Not generated
+        </span>
+      </div>
+    );
+  }
+
+  // Keys generated - show progress
   const pct = Math.round((usedKeys / totalKeys) * 100);
   const barColor = pct >= 90 ? "#EF4444" : pct >= 75 ? "#F59E0B" : "#2563EB";
   const barBg = pct >= 90 ? "#FEE2E2" : pct >= 75 ? "#FEF3C7" : "#DBEAFE";

@@ -5,7 +5,6 @@ export interface CreateEventData {
   location: string;
   startDate: string;
   endDate: string;
-  quota: string;
   eventLogo: File | null;
 }
 
@@ -43,10 +42,6 @@ export function validateCreateEventData(data: CreateEventData): ValidationResult
 
   if (!data.endDate) {
     errors.endDate = "End date is required";
-  }
-
-  if (!data.quota || parseInt(data.quota) < 1) {
-    errors.quota = "Max participants must be at least 1";
   }
 
   if (!data.eventLogo) {
