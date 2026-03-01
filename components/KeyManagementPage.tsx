@@ -724,9 +724,12 @@ function GenerateKeysModal({ onClose }: { onClose: () => void }) {
 ───────────────────────────────────────────── */
 interface KeyManagementPageProps {
   onBack: () => void;
+  eventId?: string;
 }
 
-export function KeyManagementPage({ onBack }: KeyManagementPageProps) {
+export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
+  // TODO: Fetch event data by eventId when backend is ready
+  // For now, using mock data with eventId reference for future implementation
   const [keys, setKeys] = useState<SportKey[]>(MOCK_KEYS);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
