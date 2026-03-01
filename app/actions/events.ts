@@ -690,7 +690,13 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
       }
     }
 
-    // Delete event from database (cascade delete will remove associated access keys)
+    // Delete event from database
+    // Note: Cascade delete of access_keys will work after migration,
+    // but we manually delete here as a workaround
+    await prisma.accessKey.deleteMany({
+      where: { eventId },
+    });
+
     await prisma.sportEvent.delete({
       where: { eventId },
     });
@@ -1085,7 +1091,7 @@ export async function duplicateEvent(eventId: string): Promise<DuplicateEventRes
         endDate: existingEvent.endDate,
         maxParticipants: existingEvent.maxParticipants,
         usedKeys: 0,
-        totalKeys: existingEvent.totalKeys,
+        totalKeys: 0, // Reset to 0 for duplicated event - no keys generated yet
         visibility: existingEvent.visibility,
         logoUrl: existingEvent.logoUrl,
         sponsorLogos: existingEvent.sponsorLogos as unknown as Prisma.InputJsonValue,
