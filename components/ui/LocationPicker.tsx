@@ -261,17 +261,17 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
   const autocompleteServiceRef = useRef<any>(null);
 
   // Track the actual current location (from initial OR from user selection)
-  // Using ref instead of state for synchronous updates
   const currentLocationRef = useRef<{ lat: number; lng: number; name: string } | null>(null);
 
-  // Initialize ref from props on mount and when props change
-  useEffect(() => {
-    if (initialCoordinates && initialCoordinates.lat && initialCoordinates.lng && value) {
-      currentLocationRef.current = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
-    } else if (!initialCoordinates) {
-      currentLocationRef.current = null;
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; name: string } | null>(() => {
+    // Only set initial location if both coordinates AND value are provided
+    if (initialCoordinates && value) {
+      const loc = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
+      currentLocationRef.current = loc;
+      return loc;
     }
-  }, [initialCoordinates?.lat, initialCoordinates?.lng, value]);
+    return null;
+  });
 
   // Load Google Places API on mount
   useEffect(() => {
@@ -289,6 +289,16 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
   useEffect(() => {
     setQuery(value);
   }, [value]);
+
+  // Update currentLocation when initialCoordinates changes
+  // This ensures the map modal opens at the correct position when editing
+  useEffect(() => {
+    if (initialCoordinates && initialCoordinates.lat && initialCoordinates.lng) {
+      const newLocation = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
+      setCurrentLocation(newLocation);
+      currentLocationRef.current = newLocation;
+    }
+  }, [initialCoordinates?.lat, initialCoordinates?.lng, value]);
 
   // Fetch predictions from Google Places
   const fetchPredictions = useCallback(async (input: string) => {
@@ -359,12 +369,12 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
-          // Store current location for map modal (synchronous ref update)
-          currentLocationRef.current = { lat, lng, name: description };
+          // Store current location for map modal
+          setCurrentLocation({ lat, lng, name: description });
           const timezone = await getTimezoneFromCoordinates(lat, lng);
           onChange(description, timezone, { lat, lng });
         } else {
-          currentLocationRef.current = null;
+          setCurrentLocation(null);
           const timezone = getTimezoneByLocation(description);
           onChange(description, timezone);
         }
@@ -379,16 +389,18 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
     setPredictions([]);
 
     if (coordinates) {
-      // Store current location for map modal (synchronous ref update)
+      // Store current location for map modal
       const newLocation = { lat: coordinates.lat, lng: coordinates.lng, name: location };
-      currentLocationRef.current = newLocation;
+      setCurrentLocation(newLocation);
+      currentLocationRef.current = newLocation; // Update ref for subsequent modal opens
       // Fetch timezone using coordinates
       const timezone = await getTimezoneFromCoordinates(coordinates.lat, coordinates.lng);
       onChange(location, timezone, coordinates);
     } else if (placeId) {
       getPlaceDetails(placeId, location);
     } else {
-      currentLocationRef.current = null;
+      setCurrentLocation(null);
+      currentLocationRef.current = null; // Clear ref when no coordinates
       const timezone = getTimezoneByLocation(location);
       onChange(location, timezone);
     }
@@ -546,14 +558,8 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
         </div>
       )}
 
-      {/* Map Modal - Use currentLocationRef.current to get latest location immediately */}
-      {showMapModal && (
-        <LocationModal
-          onClose={() => setShowMapModal(false)}
-          onSelect={selectLocation}
-          initialLocation={currentLocationRef.current}
-        />
-      )}
+      {/* Map Modal */}
+      {showMapModal && <LocationModal onClose={() => setShowMapModal(false)} onSelect={selectLocation} initialLocation={currentLocation} />}
     </div>
   );
 }

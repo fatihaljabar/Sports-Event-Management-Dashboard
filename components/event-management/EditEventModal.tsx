@@ -364,10 +364,10 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
               <div>
                 <FieldLabel required>Host City / Venue</FieldLabel>
                 <LocationPicker
-                  key={`location-${event.id}-${event.location.coordinates?.lat ?? 'null'}-${event.location.coordinates?.lng ?? 'null'}`}
+                  key={`location-${event.id}`}
                   value={location}
                   onChange={handleLocationChange}
-                  initialCoordinates={event.location.coordinates}
+                  initialCoordinates={locationCoordinates}
                 />
                 {errors.location && (
                   <p style={{ color: "#EF4444", fontSize: "0.7rem", marginTop: "4px" }}>{errors.location}</p>
