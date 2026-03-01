@@ -10,7 +10,7 @@ import { SportMultiSelect } from "@/components/ui/SportMultiSelect";
 import { EventTypeSelector } from "@/components/ui/EventTypeSelector";
 import { SponsorLogosUploader } from "@/components/ui/SponsorLogosUploader";
 import { EventFormActions } from "@/components/ui/EventFormActions";
-import { LocationPicker } from "@/components/ui/LocationPicker";
+import { LocationPicker } from "@/components/ui/location-picker/LocationPicker";
 import { TimezoneAlert } from "@/components/ui/TimezoneAlert";
 import { updateEvent } from "@/app/actions/events";
 import { toast } from "sonner";

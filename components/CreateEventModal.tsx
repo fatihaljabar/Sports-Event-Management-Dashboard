@@ -12,7 +12,7 @@ import { SponsorLogosUploader } from "@/components/ui/SponsorLogosUploader";
 import { EventFormActions } from "@/components/ui/EventFormActions";
 import { TimezoneAlert } from "@/components/ui/TimezoneAlert";
 import { CreateEventStepper } from "@/components/ui/CreateEventStepper";
-import { LocationPicker } from "@/components/ui/LocationPicker";
+import { LocationPicker } from "@/components/ui/location-picker/LocationPicker";
 
 interface CreateEventModalProps {
   onClose: () => void;
