@@ -1,8 +1,10 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { TopHeader } from "@/components/TopHeader";
+import { CreateEventModal } from "@/components/CreateEventModal";
 
 export function DashboardLayoutWrapper({
   children,
@@ -10,6 +12,8 @@ export function DashboardLayoutWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Determine active nav based on pathname
   const getActiveNav = () => {
@@ -22,25 +26,24 @@ export function DashboardLayoutWrapper({
   };
 
   const activeNav = getActiveNav();
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const handleNavChange = (id: string) => {
-    // Navigate to the appropriate route
+    // Navigate to the appropriate route using Next.js router
     switch (id) {
       case "dashboard":
-        window.location.href = "/";
+        router.push("/");
         break;
       case "events":
-        window.location.href = "/events";
+        router.push("/events");
         break;
       case "participants":
-        window.location.href = "/participants";
+        router.push("/participants");
         break;
       case "results":
-        window.location.href = "/results";
+        router.push("/results");
         break;
       case "medals":
-        window.location.href = "/medals";
+        router.push("/medals");
         break;
     }
   };
@@ -64,9 +67,6 @@ export function DashboardLayoutWrapper({
     </div>
   );
 }
-
-import { useState } from "react";
-import { CreateEventModal } from "@/components/CreateEventModal";
 
 export default function DashboardLayout({
   children,
