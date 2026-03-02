@@ -724,7 +724,7 @@ interface KeyManagementPageProps {
 }
 
 export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
-  const { getEventById, refreshEvents } = useEvents();
+  const { getEventById, refreshEvents, isLoading } = useEvents();
 
   // Find event by eventId
   const event = eventId ? getEventById(eventId) : null;
@@ -792,6 +792,11 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
       fetchKeys();
     }
   }, [event?.id, fetchKeys]);
+
+  // Don't render anything while events are loading (prevents "unknown event" flash)
+  if (isLoading || (eventId && !event)) {
+    return null;
+  }
 
   const formatRangeDate = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
