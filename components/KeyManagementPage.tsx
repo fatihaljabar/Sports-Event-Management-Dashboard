@@ -724,7 +724,7 @@ interface KeyManagementPageProps {
 }
 
 export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
-  const { getEventById, refreshEvents, isLoading } = useEvents();
+  const { getEventById, isLoading, refreshEvents } = useEvents();
 
   // Find event by eventId
   const event = eventId ? getEventById(eventId) : null;
@@ -776,15 +776,13 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
       if (result.success && result.keys) {
         const transformedKeys = result.keys.map(transformAccessKeyToSportKey);
         setKeys(transformedKeys);
-        // Refresh events to update totalKeys in the store
-        await refreshEvents();
       }
     } catch (error) {
       console.error("Failed to fetch keys:", error);
     } finally {
       setIsLoadingKeys(false);
     }
-  }, [event?.id, transformAccessKeyToSportKey, refreshEvents]);
+  }, [event?.id, transformAccessKeyToSportKey]);
 
   // Fetch keys from database when event changes - MUST be before early return (Rules of Hooks)
   useEffect(() => {
