@@ -741,21 +741,19 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
     return evt?.sports?.[0]?.emoji || "🏆";
   };
 
-  // Event data to display (fallback to mock if no event found)
-  const eventDisplayName = event?.name || "Asian Games 2026";
-  const eventDisplayLocation = event
-    ? `${event.location.city}${event.location.venue ? `, ${event.location.venue}` : ""}`
-    : "Nagoya, Japan";
+  // Event data to display - remove all mock data fallbacks
+  const eventDisplayName = event?.name ?? "Unknown Event";
+  const eventDisplayLocation = event?.location.city ?? "Unknown Location";
   const eventDisplayDates = event
     ? formatRangeDate(event.startDate, event.endDate)
-    : "Mar 09 – Mar 22, 2026";
+    : "TBD – TBD, TBD";
   const eventEmoji = getEventEmoji(event);
   const eventLogoUrl = event?.logoUrl;
-  const eventTotalKeys = event?.totalKeys ?? 0; // Use 0 as default, not 1000 (no mock data)
+  const eventTotalKeys = event?.totalKeys ?? 0;
   const eventIsMulti = event?.type === "multi";
-  // Convert status to lowercase for config lookup (database uses UPCASE, config uses lowercase)
-  const eventStatusRaw = event?.status || "upcoming";
-  const eventStatus = eventStatusRaw.toLowerCase() as EventStatusType;
+
+  // Status handling - remove extra conversion since getEvents already converts
+  const eventStatus = event?.status as EventStatusType || "upcoming";
   const eventStatusCfg = EVENT_STATUS_CFG[eventStatus] || EVENT_STATUS_CFG.upcoming;
 
   // Keys state - fetch from database
