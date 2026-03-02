@@ -789,7 +789,8 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
     if (event?.id) {
       fetchKeys();
     }
-  }, [event?.id, fetchKeys]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id]); // Only depend on event.id, NOT fetchKeys to prevent infinite loops
 
   // Don't render anything while events are loading (prevents "unknown event" flash)
   if (isLoading || (eventId && !event)) {
