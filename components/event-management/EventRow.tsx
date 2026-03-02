@@ -44,21 +44,35 @@ export function EventRow({
   const isConfirming = deleteConfirm === event.id;
   const [meatballMenuOpen, setMeatballMenuOpen] = useState(false);
   const [dropDirection, setDropDirection] = useState<"down" | "up">("down");
-  const [meatballPosition, setMeatballPosition] = useState<{ top: number; left: number } | null>(null);
+  const [meatballPosition, setMeatballPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const meatballRef = useRef<HTMLDivElement>(null);
 
-  // Close meatball menu when clicking outside
+  // Close meatball menu when clicking outside (including portal dropdown)
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (meatballRef.current && !meatballRef.current.contains(e.target as Node)) {
+      // Check if click is outside the button AND outside the dropdown (portal)
+      const clickedOutsideButton =
+        meatballRef.current &&
+        !meatballRef.current.contains(e.target as Node);
+
+      // The dropdown is in portal, check if it exists and if click was inside it
+      const dropdown = document.getElementById(`meatball-dropdown-${event.id}`);
+      const clickedOutsideDropdown =
+        dropdown && !dropdown.contains(e.target as Node);
+
+      if (clickedOutsideButton && clickedOutsideDropdown) {
         setMeatballMenuOpen(false);
       }
     };
     if (meatballMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [meatballMenuOpen]);
+  }, [meatballMenuOpen, event.id]);
 
   // Calculate dropdown direction when menu opens
   useEffect(() => {
@@ -71,7 +85,10 @@ export function EventRow({
       // Calculate position for portal dropdown (align to right)
       const menuWidth = 160;
       setMeatballPosition({
-        top: dropDirection === "up" ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+        top:
+          dropDirection === "up"
+            ? rect.top - dropdownHeight - 4
+            : rect.bottom + 4,
         left: rect.right - menuWidth,
       });
 
@@ -103,7 +120,11 @@ export function EventRow({
         break;
       case "archive":
         if (handlers.onArchive) {
-          await handlers.onArchive(event.id, event.name, event.status === "archived");
+          await handlers.onArchive(
+            event.id,
+            event.name,
+            event.status === "archived",
+          );
         }
         break;
       case "export":
@@ -127,8 +148,8 @@ export function EventRow({
         backgroundColor: isConfirming
           ? "#FFF5F5"
           : hovered
-          ? "#F8FAFF"
-          : "transparent",
+            ? "#F8FAFF"
+            : "transparent",
         borderBottom: isLast ? "none" : "1px solid var(--em-border-light)",
         transition: "background-color 0.12s",
         cursor: "default",
@@ -142,7 +163,11 @@ export function EventRow({
           title={`Manage ${event.name}`}
         >
           {/* Logo */}
-          <EventLogo logo={event.logo} logoUrl={event.logoUrl} name={event.name} />
+          <EventLogo
+            logo={event.logo}
+            logoUrl={event.logoUrl}
+            name={event.name}
+          />
           <EventInfo event={event} />
         </div>
       </td>
@@ -154,7 +179,12 @@ export function EventRow({
 
       {/* Timeline */}
       <td style={{ padding: "14px 20px" }}>
-        <TimelineDisplay startDate={event.startDate} endDate={event.endDate} daysLabel={event.daysLabel} days={days} />
+        <TimelineDisplay
+          startDate={event.startDate}
+          endDate={event.endDate}
+          daysLabel={event.daysLabel}
+          days={days}
+        />
       </td>
 
       {/* Status */}
@@ -164,7 +194,10 @@ export function EventRow({
 
       {/* Key Usage */}
       <td style={{ padding: "14px 20px" }}>
-        <KeyUsageDisplay usedKeys={event.usedKeys} totalKeys={event.totalKeys} />
+        <KeyUsageDisplay
+          usedKeys={event.usedKeys}
+          totalKeys={event.totalKeys}
+        />
       </td>
 
       {/* Actions */}
@@ -361,7 +394,11 @@ function EventTypeDisplay({ type, sportsCount }: EventTypeDisplayProps) {
   if (type === "multi") {
     return (
       <div className="flex items-center gap-1.5">
-        <Layers className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.75} style={{ color: "#7C3AED" }} />
+        <Layers
+          className="w-3.5 h-3.5 flex-shrink-0"
+          strokeWidth={1.75}
+          style={{ color: "#7C3AED" }}
+        />
         <div>
           <p
             style={{
@@ -388,7 +425,11 @@ function EventTypeDisplay({ type, sportsCount }: EventTypeDisplayProps) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <Trophy className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.75} style={{ color: "#F59E0B" }} />
+      <Trophy
+        className="w-3.5 h-3.5 flex-shrink-0"
+        strokeWidth={1.75}
+        style={{ color: "#F59E0B" }}
+      />
       <div>
         <p
           style={{
@@ -417,14 +458,23 @@ interface TimelineDisplayProps {
   startDate: string;
   endDate: string;
   daysLabel: string;
-  days: typeof DAYS_CONFIG[keyof typeof DAYS_CONFIG];
+  days: (typeof DAYS_CONFIG)[keyof typeof DAYS_CONFIG];
 }
 
-function TimelineDisplay({ startDate, endDate, daysLabel, days }: TimelineDisplayProps) {
+function TimelineDisplay({
+  startDate,
+  endDate,
+  daysLabel,
+  days,
+}: TimelineDisplayProps) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1.5">
-        <Calendar className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} style={{ color: "#94A3B8" }} />
+        <Calendar
+          className="w-3 h-3 flex-shrink-0"
+          strokeWidth={1.75}
+          style={{ color: "#94A3B8" }}
+        />
         <span
           style={{
             color: "#374151",
@@ -444,7 +494,11 @@ function TimelineDisplay({ startDate, endDate, daysLabel, days }: TimelineDispla
           border: `1px solid ${days.border}`,
         }}
       >
-        <Clock className="w-2.5 h-2.5" strokeWidth={2} style={{ color: days.color }} />
+        <Clock
+          className="w-2.5 h-2.5"
+          strokeWidth={2}
+          style={{ color: days.color }}
+        />
         <span
           style={{
             color: days.color,
@@ -470,7 +524,11 @@ function KeyUsageDisplay({ usedKeys, totalKeys }: KeyUsageDisplayProps) {
   if (totalKeys === 0) {
     return (
       <div className="flex items-center gap-1.5">
-        <KeyRound className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} style={{ color: "#94A3B8" }} />
+        <KeyRound
+          className="w-3.5 h-3.5 flex-shrink-0"
+          strokeWidth={1.5}
+          style={{ color: "#94A3B8" }}
+        />
         <span
           style={{
             color: "#94A3B8",
@@ -619,9 +677,25 @@ function ActionsCell({
         >
           {isDeleting ? (
             <>
-              <svg className="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin w-3 h-3"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Deleting...
             </>
@@ -655,7 +729,11 @@ function ActionsCell({
         color="#64748B"
         bgHover="#F8FAFC"
         borderHover="#E2E8F0"
-        onClick={() => (handlers.onEdit ? handlers.onEdit(event.id) : handlers.onEventClick(event.id))}
+        onClick={() =>
+          handlers.onEdit
+            ? handlers.onEdit(event.id)
+            : handlers.onEventClick(event.id)
+        }
       />
 
       {/* More (Meatball Menu) */}
@@ -670,159 +748,190 @@ function ActionsCell({
         />
 
         {/* Meatball Dropdown */}
-        {meatballMenuOpen && meatballPosition && createPortal(
-          <div
-            className="rounded-lg shadow-xl"
-            style={{
-              position: "fixed",
-              top: `${meatballPosition.top}px`,
-              left: `${meatballPosition.left}px`,
-              backgroundColor: "#FFFFFF",
-              border: "1px solid #E2E8F0",
-              minWidth: "160px",
-              padding: "4px",
-              zIndex: 9999,
-            }}
-          >,
-            <div className="flex flex-col gap-0.5">
-              <button
-                onClick={() => handleMenuAction("view")}
-                className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
-                style={{
-                  color: "#374151",
-                  fontSize: "0.72rem",
-                  fontFamily: '"Inter", sans-serif',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                }}
-              >
-                <Trophy
-                  className="w-3.5 h-3.5"
-                  strokeWidth={1.75}
-                  style={{ color: "#64748B" }}
-                />
-                View Details
-              </button>
+        {meatballMenuOpen &&
+          meatballPosition &&
+          createPortal(
+            <div
+              id={`meatball-dropdown-${event.id}`}
+              className="rounded-lg shadow-xl"
+              style={{
+                position: "fixed",
+                top: `${meatballPosition.top}px`,
+                left: `${meatballPosition.left}px`,
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                minWidth: "160px",
+                padding: "4px",
+                zIndex: 9999,
+              }}
+            >
+              <div className="flex flex-col gap-0.5">
+                <button
+                  onClick={() => handleMenuAction("view")}
+                  className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
+                  style={{
+                    color: "#374151",
+                    fontSize: "0.72rem",
+                    fontFamily: '"Inter", sans-serif',
+                  }}
+                  onMouseEnter={(e) => {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "#F8FAFC";
+                  }}
+                  onMouseLeave={(e) => {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "transparent";
+                  }}
+                >
+                  <Trophy
+                    className="w-3.5 h-3.5"
+                    strokeWidth={1.75}
+                    style={{ color: "#64748B" }}
+                  />
+                  View Details
+                </button>
 
-              <button
-                onClick={() => handleMenuAction("edit")}
-                disabled={event.status === "completed"}
-                className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
-                style={{
-                  color: event.status === "completed" ? "#CBD5E1" : "#374151",
-                  fontSize: "0.72rem",
-                  fontFamily: '"Inter", sans-serif',
-                  cursor: event.status === "completed" ? "not-allowed" : "pointer",
-                  opacity: event.status === "completed" ? 0.6 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (event.status !== "completed") {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                }}
-              >
-                <Pencil
-                  className="w-3.5 h-3.5"
-                  strokeWidth={1.75}
-                  style={{ color: event.status === "completed" ? "#CBD5E1" : "#64748B" }}
-                />
-                Edit Event
-                {event.status === "completed" && (
-                  <span
+                <button
+                  onClick={() => handleMenuAction("edit")}
+                  disabled={event.status === "completed"}
+                  className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
+                  style={{
+                    color: event.status === "completed" ? "#CBD5E1" : "#374151",
+                    fontSize: "0.72rem",
+                    fontFamily: '"Inter", sans-serif',
+                    cursor:
+                      event.status === "completed" ? "not-allowed" : "pointer",
+                    opacity: event.status === "completed" ? 0.6 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (event.status !== "completed") {
+                      (
+                        e.currentTarget as HTMLButtonElement
+                      ).style.backgroundColor = "#F8FAFC";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "transparent";
+                  }}
+                >
+                  <Pencil
+                    className="w-3.5 h-3.5"
+                    strokeWidth={1.75}
                     style={{
-                      color: "#94A3B8",
-                      fontSize: "0.6rem",
-                      marginLeft: "auto",
+                      color:
+                        event.status === "completed" ? "#CBD5E1" : "#64748B",
                     }}
-                  >
-                    (Completed)
-                  </span>
-                )}
-              </button>
+                  />
+                  Edit Event
+                  {event.status === "completed" && (
+                    <span
+                      style={{
+                        color: "#94A3B8",
+                        fontSize: "0.6rem",
+                        marginLeft: "auto",
+                      }}
+                    >
+                      (Completed)
+                    </span>
+                  )}
+                </button>
 
-              <button
-                onClick={() => handleMenuAction("duplicate")}
-                disabled={event.status === "completed"}
-                className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
-                style={{
-                  color: event.status === "completed" ? "#CBD5E1" : "#374151",
-                  fontSize: "0.72rem",
-                  fontFamily: '"Inter", sans-serif',
-                  cursor: event.status === "completed" ? "not-allowed" : "pointer",
-                  opacity: event.status === "completed" ? 0.6 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (event.status !== "completed") {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                }}
-              >
-                <Layers
-                  className="w-3.5 h-3.5"
-                  strokeWidth={1.75}
-                  style={{ color: event.status === "completed" ? "#CBD5E1" : "#64748B" }}
-                />
-                Duplicate
-              </button>
+                <button
+                  onClick={() => handleMenuAction("duplicate")}
+                  disabled={event.status === "completed"}
+                  className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
+                  style={{
+                    color: event.status === "completed" ? "#CBD5E1" : "#374151",
+                    fontSize: "0.72rem",
+                    fontFamily: '"Inter", sans-serif',
+                    cursor:
+                      event.status === "completed" ? "not-allowed" : "pointer",
+                    opacity: event.status === "completed" ? 0.6 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (event.status !== "completed") {
+                      (
+                        e.currentTarget as HTMLButtonElement
+                      ).style.backgroundColor = "#F8FAFC";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "transparent";
+                  }}
+                >
+                  <Layers
+                    className="w-3.5 h-3.5"
+                    strokeWidth={1.75}
+                    style={{
+                      color:
+                        event.status === "completed" ? "#CBD5E1" : "#64748B",
+                    }}
+                  />
+                  Duplicate
+                </button>
 
-              <div
-                style={{
-                  borderTop: "1px solid #F1F5F9",
-                  margin: "4px 0",
-                }}
-              ></div>
+                <div
+                  style={{
+                    borderTop: "1px solid #F1F5F9",
+                    margin: "4px 0",
+                  }}
+                ></div>
 
-              <button
-                onClick={() => handleMenuAction("archive")}
-                className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
-                style={{
-                  color: event.status === "archived" ? "#2563EB" : "#94A3B8",
-                  fontSize: "0.72rem",
-                  fontFamily: '"Inter", sans-serif',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                }}
-              >
-                <Archive className="w-3.5 h-3.5" strokeWidth={1.75} />
-                {event.status === "archived" ? "Unarchive" : "Archive"}
-              </button>
+                <button
+                  onClick={() => handleMenuAction("archive")}
+                  className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
+                  style={{
+                    color: event.status === "archived" ? "#2563EB" : "#94A3B8",
+                    fontSize: "0.72rem",
+                    fontFamily: '"Inter", sans-serif',
+                  }}
+                  onMouseEnter={(e) => {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "#F8FAFC";
+                  }}
+                  onMouseLeave={(e) => {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "transparent";
+                  }}
+                >
+                  <Archive className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  {event.status === "archived" ? "Unarchive" : "Archive"}
+                </button>
 
-              <button
-                onClick={() => handleMenuAction("export")}
-                className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
-                style={{
-                  color: "#94A3B8",
-                  fontSize: "0.72rem",
-                  fontFamily: '"Inter", sans-serif',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                }}
-              >
-                <Calendar className="w-3.5 h-3.5" strokeWidth={1.75} />
-                Export Data
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
+                <button
+                  onClick={() => handleMenuAction("export")}
+                  className="flex items-center gap-2 rounded px-3 py-2 transition-all text-left"
+                  style={{
+                    color: "#94A3B8",
+                    fontSize: "0.72rem",
+                    fontFamily: '"Inter", sans-serif',
+                  }}
+                  onMouseEnter={(e) => {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "#F8FAFC";
+                  }}
+                  onMouseLeave={(e) => {
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "transparent";
+                  }}
+                >
+                  <Calendar className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  Export Data
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )}
       </div>
 
       {/* Delete */}
@@ -838,11 +947,13 @@ function ActionsCell({
           color: "#EF4444",
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FEE2E2";
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+            "#FEE2E2";
           (e.currentTarget as HTMLButtonElement).style.borderColor = "#FCA5A5";
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFF5F5";
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+            "#FFF5F5";
           (e.currentTarget as HTMLButtonElement).style.borderColor = "#FEE2E2";
         }}
       >
@@ -864,7 +975,14 @@ interface ActionButtonProps {
   onClick?: () => void;
 }
 
-function ActionButton({ icon, label, color, bgHover, borderHover, onClick }: ActionButtonProps) {
+function ActionButton({
+  icon,
+  label,
+  color,
+  bgHover,
+  borderHover,
+  onClick,
+}: ActionButtonProps) {
   return (
     <button
       onClick={onClick}
@@ -887,7 +1005,8 @@ function ActionButton({ icon, label, color, bgHover, borderHover, onClick }: Act
         (e.currentTarget as HTMLButtonElement).style.borderColor = borderHover;
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+          "transparent";
         (e.currentTarget as HTMLButtonElement).style.borderColor = "#F1F5F9";
       }}
     >

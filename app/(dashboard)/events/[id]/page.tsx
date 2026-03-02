@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { KeyManagementPage } from "@/components/KeyManagementPage";
+import { KeyManagementPage } from "@/components/key-management";
 
 export default function EventDetailPage() {
   const params = useParams();
