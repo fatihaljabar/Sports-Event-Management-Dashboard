@@ -1,6 +1,6 @@
 import React from "react";
 
-export type EventStatus = "active" | "inactive" | "upcoming" | "completed" | "archived";
+export type EventStatus = "active" | "inactive" | "upcoming" | "ongoing" | "completed" | "archived";
 
 const STATUS_CONFIG: Record<
   EventStatus,
@@ -24,6 +24,12 @@ const STATUS_CONFIG: Record<
     color: "var(--em-status-upcoming-color)",
     dot: "var(--em-status-upcoming-dot)",
   },
+  ongoing: {
+    label: "Ongoing",
+    bg: "#FEF3C7",
+    color: "#B45309",
+    dot: "#F59E0B",
+  },
   completed: {
     label: "Completed",
     bg: "var(--em-status-completed-bg)",
@@ -39,11 +45,13 @@ const STATUS_CONFIG: Record<
 };
 
 interface StatusBadgeProps {
-  status: EventStatus;
+  status: string; // Accept any string to handle database uppercase values
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status];
+  // Convert database status (uppercase) to lowercase for config lookup
+  const statusKey = (status?.toLowerCase() || "upcoming") as EventStatus;
+  const config = STATUS_CONFIG[statusKey] || STATUS_CONFIG.upcoming;
 
   return (
     <div
@@ -59,7 +67,7 @@ export function StatusBadge({ status }: StatusBadgeProps) {
           width: "6px",
           height: "6px",
           backgroundColor: config.dot,
-          boxShadow: status === "active" ? `0 0 4px ${config.dot}` : "none",
+          boxShadow: statusKey === "active" ? `0 0 4px ${config.dot}` : "none",
         }}
       />
       <span
