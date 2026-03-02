@@ -751,7 +751,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
     : "Mar 09 – Mar 22, 2026";
   const eventEmoji = getEventEmoji(event);
   const eventLogoUrl = event?.logoUrl;
-  const eventTotalKeys = event?.totalKeys || 1000;
+  const eventTotalKeys = event?.totalKeys ?? 0; // Use 0 as default, not 1000 (no mock data)
   const eventIsMulti = event?.type === "multi";
   const eventStatus = event?.status || "active";
   const eventStatusCfg = EVENT_STATUS_CFG[eventStatus as EventStatusType] || EVENT_STATUS_CFG.active;
