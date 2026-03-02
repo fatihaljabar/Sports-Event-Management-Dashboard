@@ -255,6 +255,7 @@ async function uploadEventLogo(
     const timestamp = Date.now();
     // Sanitize eventId in storage path to prevent path traversal
     const sanitizedEventId = eventId.replace(/[^a-zA-Z0-9-]/g, "");
+    // Store in event-logos subfolder for organization
     const storagePath = `event-logos/${sanitizedEventId}-${timestamp}.${ext}`;
 
     // Convert base64 to buffer
@@ -273,10 +274,26 @@ async function uploadEventLogo(
       return null;
     }
 
-    devLog.log("Uploading event logo:", storagePath, "Size:", buffer.length, "bytes");
+    console.log("[UPLOAD] Uploading event logo to path:", storagePath, "Size:", buffer.length, "bytes");
+
+    // Check if bucket exists first
+    const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+    if (bucketError) {
+      console.error("[UPLOAD] Error listing buckets:", bucketError);
+      return null;
+    }
+
+    const bucketExists = buckets?.some(b => b.id === 'event-logos');
+    console.log("[UPLOAD] Bucket 'event-logos' exists:", bucketExists);
+
+    if (!bucketExists) {
+      console.error("[UPLOAD] Bucket 'event-logos' does not exist! Please create it in Supabase.");
+      console.error("[UPLOAD] Run the SQL in supabase-storage-policy.sql to create the bucket.");
+      return null;
+    }
 
     // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from("event-logos")
       .upload(storagePath, buffer, {
         contentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
@@ -284,22 +301,26 @@ async function uploadEventLogo(
       });
 
     if (uploadError) {
-      console.error("Supabase upload error:", uploadError);
+      console.error("[UPLOAD] Supabase upload error:", {
+        message: uploadError.message,
+        statusCode: uploadError.statusCode,
+        name: uploadError.name
+      });
       return null;
     }
 
-    devLog.log("Upload successful, getting public URL...");
+    console.log("[UPLOAD] Upload successful:", uploadData?.path);
 
     // Get public URL
     const { data: publicUrlData } = supabase.storage
       .from("event-logos")
       .getPublicUrl(storagePath);
 
-    devLog.log("Public URL:", publicUrlData.publicUrl);
+    console.log("[UPLOAD] Public URL:", publicUrlData.publicUrl);
 
     return publicUrlData.publicUrl;
   } catch (error) {
-    console.error("Exception in uploadEventLogo:", error);
+    console.error("[UPLOAD] Exception in uploadEventLogo:", error);
     return null;
   }
 }
@@ -314,7 +335,7 @@ async function uploadSponsorLogos(
   const results: SponsorLogoData[] = [];
   const supabase = createServiceClient();
 
-  devLog.log(`Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
+  console.log(`[SPONSOR UPLOAD] Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
 
   const globalTimestamp = Date.now(); // Single timestamp for all uploads
   const sanitizedEventId = eventId.replace(/[^a-zA-Z0-9-]/g, "");
@@ -328,16 +349,17 @@ async function uploadSponsorLogos(
       // Validate file extension with improved security
       const ext = validateFileExtension(sponsor.fileName);
       if (!ext) {
-        console.error(`[${i+1}/${sponsorLogos.length}] Invalid sponsor logo extension:`, sponsor.fileName);
+        console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Invalid extension:`, sponsor.fileName);
         continue;
       }
 
       // Validate file size
       if (!validateBase64Size(sponsor.base64, MAX_FILE_SIZE)) {
-        console.error(`[${i+1}/${sponsorLogos.length}] Sponsor logo exceeds size limit`);
+        console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Exceeds size limit`);
         continue;
       }
 
+      // Store in sponsor-logos subfolder for organization
       const storagePath = `sponsor-logos/${sanitizedEventId}-${globalTimestamp}-${i + 1}.${ext}`;
 
       // Convert base64 to buffer
@@ -352,11 +374,11 @@ async function uploadSponsorLogos(
 
       // Double-check buffer size
       if (buffer.length > MAX_FILE_SIZE) {
-        console.error(`[${i+1}/${sponsorLogos.length}] Buffer size exceeds limit:`, buffer.length);
+        console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Buffer size exceeds limit:`, buffer.length);
         continue;
       }
 
-      devLog.log(`[${i+1}/${sponsorLogos.length}] Uploading sponsor logo:`, storagePath, "Size:", buffer.length, "bytes");
+      console.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Uploading to:`, storagePath, "Size:", buffer.length, "bytes");
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("event-logos")
@@ -366,24 +388,27 @@ async function uploadSponsorLogos(
         });
 
       if (uploadError) {
-        console.error(`[${i+1}/${sponsorLogos.length}] Sponsor logo upload error:`, uploadError.message);
+        console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Upload error:`, {
+          message: uploadError.message,
+          statusCode: uploadError.statusCode
+        });
         continue;
       }
 
-      devLog.log(`[${i+1}/${sponsorLogos.length}] Upload successful:`, uploadData?.path);
+      console.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Upload successful:`, uploadData?.path);
 
       const { data: publicUrlData } = supabase.storage
         .from("event-logos")
         .getPublicUrl(storagePath);
 
       results.push({ name: sanitizedName, url: publicUrlData.publicUrl });
-      devLog.log(`[${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
+      console.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
     } catch (error) {
-      console.error(`[${i+1}/${sponsorLogos.length}] Exception uploading sponsor logo:`, error);
+      console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Exception:`, error);
     }
   }
 
-  devLog.log(`Sponsor logos upload complete. ${results.length}/${sponsorLogos.length} successful.`);
+  console.log(`[SPONSOR UPLOAD] Complete. ${results.length}/${sponsorLogos.length} successful.`);
   return results;
 }
 
