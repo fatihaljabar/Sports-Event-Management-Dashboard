@@ -38,9 +38,9 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
   const currentLocationRef = useRef<LocationData | null>(null);
 
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(() => {
-    // Only set initial location if both coordinates AND value are provided
-    if (initialCoordinates && value) {
-      const loc = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
+    // Set initial location if coordinates are provided (even if value is empty initially)
+    if (initialCoordinates && initialCoordinates.lat != null && initialCoordinates.lng != null) {
+      const loc = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value || "" };
       currentLocationRef.current = loc;
       return loc;
     }
@@ -65,15 +65,15 @@ export function LocationPicker({ value, onChange, initialCoordinates }: Location
     setQuery(value);
   }, [value]);
 
-  // Update currentLocation when initialCoordinates changes
+  // Update currentLocation when initialCoordinates or value changes
   // This ensures the map modal opens at the correct position when editing
   useEffect(() => {
-    if (initialCoordinates && initialCoordinates.lat && initialCoordinates.lng) {
-      const newLocation = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value };
+    if (initialCoordinates && initialCoordinates.lat != null && initialCoordinates.lng != null) {
+      const newLocation = { lat: initialCoordinates.lat, lng: initialCoordinates.lng, name: value || "" };
       setCurrentLocation(newLocation);
       currentLocationRef.current = newLocation;
     }
-  }, [initialCoordinates?.lat, initialCoordinates?.lng, value]);
+  }, [initialCoordinates, value]);
 
   // Fetch predictions from Google Places
   const fetchPredictions = useCallback(async (input: string) => {
