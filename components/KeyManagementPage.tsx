@@ -724,7 +724,7 @@ interface KeyManagementPageProps {
 }
 
 export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
-  const { getEventById, refreshEvents, isLoading: isLoadingEvents } = useEvents();
+  const { getEventById, refreshEvents } = useEvents();
 
   // Find event by eventId
   const event = eventId ? getEventById(eventId) : null;
@@ -792,20 +792,6 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
       fetchKeys();
     }
   }, [event?.id, fetchKeys]);
-
-  // Show loading state while events are being fetched
-  if (isLoadingEvents || (eventId && !event)) {
-    return (
-      <main className="flex-1 overflow-y-auto flex items-center justify-center" style={{ backgroundColor: "#F8FAFC" }}>
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-t-4 border-gray-200 rounded-full animate-spin"></div>
-          <p style={{ color: "#64748B", fontSize: "0.9rem", fontFamily: '"Inter", sans-serif' }}>
-            Loading event details...
-          </p>
-        </div>
-      </main>
-    );
-  }
 
   const formatRangeDate = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
