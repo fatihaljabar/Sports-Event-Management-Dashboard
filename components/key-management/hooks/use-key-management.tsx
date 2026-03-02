@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldOff, RotateCcw, Trash2 } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
 import { getKeysByEvent, revokeKey, restoreKey, deleteKey } from "@/app/actions/keys";
@@ -35,13 +35,13 @@ const getKeysQueryKey = (eventId: string) => ["keys", eventId] as const;
  */
 export function useKeyManagement(eventId: string | undefined) {
   const { getEventById, isLoading, refreshEvents } = useEvents();
+  const queryClient = useQueryClient();
   const event = eventId ? getEventById(eventId) : null;
 
-  // Track if initial load is complete (to prevent blinking on auto-refresh)
+  // Track if initial load is complete
   const isInitialLoad = useRef(true);
 
-  // Keys state for optimistic updates
-  const [keys, setKeys] = useState<SportKey[]>([]);
+  // Search and filter state
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
 
@@ -81,36 +81,39 @@ export function useKeyManagement(eventId: string | undefined) {
       throw new Error(result.error || "Failed to fetch keys");
     },
     enabled: !!event?.id,
-    refetchInterval: isTabVisible ? KEYS_REFETCH_INTERVAL : false, // Pause when tab hidden
-    refetchIntervalInBackground: false, // Never poll when tab is background
-    refetchOnWindowFocus: false, // Don't refetch on tab switch (we use interval)
-    staleTime: 5000, // Consider data fresh for 5 seconds
-    retry: 1, // Only retry once on failure
+    refetchInterval: isTabVisible ? KEYS_REFETCH_INTERVAL : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5000,
+    retry: 1,
   });
 
-  // Update local keys state when fetched data changes
+  // Track initial load completion
   useEffect(() => {
-    if (fetchedKeys.length > 0 || keys.length === 0) {
-      setKeys(fetchedKeys);
-    }
     if (isInitialLoad.current && fetchedKeys.length > 0) {
       isInitialLoad.current = false;
     }
-  }, [fetchedKeys]);
+  }, [fetchedKeys.length]);
 
-  // Manual fetch function (for use after mutations)
+  // Use fetchedKeys directly - no local state syncing (prevents infinite loop)
+  const keys = fetchedKeys;
+
+  // Manual fetch function
   const fetchKeys = useCallback(() => {
     refetchKeys();
   }, [refetchKeys]);
 
   // ═══════════════════════════════════════════════════════════════
-  // EVENT HANDLERS (OPTIMISTIC UPDATES)
+  // EVENT HANDLERS (WITH OPTIMISTIC UPDATES)
   // ═══════════════════════════════════════════════════════════════
 
   const handleRevoke = useCallback(async (id: string) => {
-    // Optimistic update
-    setKeys((prev) =>
-      prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
+    // Optimistic update - update cache directly
+    queryClient.setQueryData(
+      getKeysQueryKey(event?.id ?? ""),
+      (old: SportKey[] | undefined) => {
+        return old?.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k)) ?? [];
+      }
     );
 
     try {
@@ -121,32 +124,30 @@ export function useKeyManagement(eventId: string | undefined) {
           icon: <ShieldOff className="w-5 h-5" />,
           className: "revoke-toast",
         });
-        // Refetch to ensure consistency with server
+        // Refetch to ensure server consistency
         refetchKeys();
       } else {
-        // Revert on failure
-        setKeys((prev) =>
-          prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
-        );
+        // Revert by refetching
+        refetchKeys();
         toast.error("Failed to revoke key", {
           description: result.error || "Please try again.",
         });
       }
     } catch (error) {
-      // Revert on error
-      setKeys((prev) =>
-        prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
-      );
+      refetchKeys();
       toast.error("An error occurred", {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     }
-  }, [refetchKeys]);
+  }, [event?.id, queryClient, refetchKeys]);
 
   const handleRestore = useCallback(async (id: string) => {
     // Optimistic update
-    setKeys((prev) =>
-      prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
+    queryClient.setQueryData(
+      getKeysQueryKey(event?.id ?? ""),
+      (old: SportKey[] | undefined) => {
+        return old?.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k)) ?? [];
+      }
     );
 
     try {
@@ -159,29 +160,30 @@ export function useKeyManagement(eventId: string | undefined) {
         });
         refetchKeys();
       } else {
-        // Revert on failure
-        setKeys((prev) =>
-          prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
-        );
+        refetchKeys();
         toast.error("Failed to restore key", {
           description: result.error || "Please try again.",
         });
       }
     } catch (error) {
-      // Revert on error
-      setKeys((prev) =>
-        prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
-      );
+      refetchKeys();
       toast.error("An error occurred", {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     }
-  }, [refetchKeys]);
+  }, [event?.id, queryClient, refetchKeys]);
 
   const handleDelete = useCallback(async (id: string) => {
-    // Optimistic update
+    // Store previous data for rollback
     const previousKeys = keys;
-    setKeys((prev) => prev.filter((k) => k.id !== id));
+
+    // Optimistic update
+    queryClient.setQueryData(
+      getKeysQueryKey(event?.id ?? ""),
+      (old: SportKey[] | undefined) => {
+        return old?.filter((k) => k.id !== id) ?? [];
+      }
+    );
 
     try {
       const result = await deleteKey(id);
@@ -193,48 +195,61 @@ export function useKeyManagement(eventId: string | undefined) {
           icon: <Trash2 className="w-5 h-5" />,
           className: "delete-toast",
         });
-        // Invalidate and refetch keys query
-        refetchKeys();
       } else {
-        // Revert on failure
-        setKeys(previousKeys);
+        // Revert by restoring previous data
+        queryClient.setQueryData(
+          getKeysQueryKey(event?.id ?? ""),
+          previousKeys
+        );
         toast.error("Failed to delete key", {
           description: result.error || "Please try again.",
         });
       }
     } catch (error) {
-      // Revert on error
-      setKeys(previousKeys);
+      // Revert
+      queryClient.setQueryData(
+        getKeysQueryKey(event?.id ?? ""),
+        previousKeys
+      );
       toast.error("An error occurred", {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     }
-  }, [keys, refreshEvents, refetchKeys]);
+  }, [keys, event?.id, queryClient, refreshEvents, refetchKeys]);
 
   // ═══════════════════════════════════════════════════════════════
   // FILTERING & STATS
   // ═══════════════════════════════════════════════════════════════
 
   // Filter keys based on search and status
-  const filtered = keys.filter((k) => {
-    const matchStatus = statusFilter === "all" || k.status === statusFilter;
+  const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      k.code.toLowerCase().includes(q) ||
-      k.sport.toLowerCase().includes(q) ||
-      k.userEmail?.toLowerCase().includes(q) ||
-      k.userName?.toLowerCase().includes(q);
-    return matchStatus && matchSearch;
-  });
+    return keys.filter((k: SportKey) => {
+      const matchStatus = statusFilter === "all" || k.status === statusFilter;
+      if (!q) return matchStatus;
+      return (
+        matchStatus &&
+        (k.code.toLowerCase().includes(q) ||
+          k.sport.toLowerCase().includes(q) ||
+          (k.userEmail && k.userEmail.toLowerCase().includes(q)) ||
+          (k.userName && k.userName.toLowerCase().includes(q)))
+      );
+    });
+  }, [keys, search, statusFilter]);
 
   // Status tabs with counts
-  const statusTabs = [
-    { id: "all" as const, label: "All Keys", count: keys.length },
-    { id: "available" as const, label: "Available", count: keys.filter((k) => k.status === "available").length },
-    { id: "confirmed" as const, label: "Confirmed", count: keys.filter((k) => k.status === "confirmed").length },
-    { id: "revoked" as const, label: "Revoked", count: keys.filter((k) => k.status === "revoked").length },
-  ];
+  const statusTabs = useMemo(() => {
+    const availableCount = keys.filter((k) => k.status === "available").length;
+    const confirmedCount = keys.filter((k) => k.status === "confirmed").length;
+    const revokedCount = keys.filter((k) => k.status === "revoked").length;
+
+    return [
+      { id: "all" as const, label: "All Keys", count: keys.length },
+      { id: "available" as const, label: "Available", count: availableCount },
+      { id: "confirmed" as const, label: "Confirmed", count: confirmedCount },
+      { id: "revoked" as const, label: "Revoked", count: revokedCount },
+    ];
+  }, [keys]);
 
   // Stats
   const total = event?.totalKeys ?? 0;
