@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Layers,
   Trophy,
@@ -43,6 +44,7 @@ export function EventRow({
   const isConfirming = deleteConfirm === event.id;
   const [meatballMenuOpen, setMeatballMenuOpen] = useState(false);
   const [dropDirection, setDropDirection] = useState<"down" | "up">("down");
+  const [meatballPosition, setMeatballPosition] = useState<{ top: number; left: number } | null>(null);
   const meatballRef = useRef<HTMLDivElement>(null);
 
   // Close meatball menu when clicking outside
@@ -66,14 +68,23 @@ export function EventRow({
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
 
+      // Calculate position for portal dropdown (align to right)
+      const menuWidth = 160;
+      setMeatballPosition({
+        top: dropDirection === "up" ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+        left: rect.right - menuWidth,
+      });
+
       // Show above if not enough space below (with 20px buffer)
       if (spaceBelow < dropdownHeight + 20 && spaceAbove > spaceBelow) {
         setDropDirection("up");
       } else {
         setDropDirection("down");
       }
+    } else {
+      setMeatballPosition(null);
     }
-  }, [meatballMenuOpen]);
+  }, [meatballMenuOpen, dropDirection]);
 
   // Handle meatball menu actions
   const handleMenuAction = async (action: string) => {
@@ -161,6 +172,7 @@ export function EventRow({
         <ActionsCell
           isConfirming={isConfirming}
           meatballMenuOpen={meatballMenuOpen}
+          meatballPosition={meatballPosition}
           setMeatballMenuOpen={setMeatballMenuOpen}
           setDeleteConfirm={setDeleteConfirm}
           handleDeleteConfirm={handleDeleteConfirm}
@@ -539,6 +551,7 @@ function KeyUsageDisplay({ usedKeys, totalKeys }: KeyUsageDisplayProps) {
 interface ActionsCellProps {
   isConfirming: boolean;
   meatballMenuOpen: boolean;
+  meatballPosition: { top: number; left: number } | null;
   setMeatballMenuOpen: (open: boolean) => void;
   setDeleteConfirm: (id: string | null) => void;
   handleDeleteConfirm: () => void;
@@ -553,6 +566,7 @@ interface ActionsCellProps {
 function ActionsCell({
   isConfirming,
   meatballMenuOpen,
+  meatballPosition,
   setMeatballMenuOpen,
   setDeleteConfirm,
   handleDeleteConfirm,
@@ -656,18 +670,20 @@ function ActionsCell({
         />
 
         {/* Meatball Dropdown */}
-        {meatballMenuOpen && (
+        {meatballMenuOpen && meatballPosition && createPortal(
           <div
-            className={`absolute right-0 rounded-lg shadow-xl z-50 ${
-              dropDirection === "up" ? "bottom-full mb-1" : "top-full mt-1"
-            }`}
+            className="rounded-lg shadow-xl"
             style={{
+              position: "fixed",
+              top: `${meatballPosition.top}px`,
+              left: `${meatballPosition.left}px`,
               backgroundColor: "#FFFFFF",
               border: "1px solid #E2E8F0",
               minWidth: "160px",
               padding: "4px",
+              zIndex: 9999,
             }}
-          >
+          >,
             <div className="flex flex-col gap-0.5">
               <button
                 onClick={() => handleMenuAction("view")}
@@ -804,7 +820,8 @@ function ActionsCell({
                 Export Data
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 
