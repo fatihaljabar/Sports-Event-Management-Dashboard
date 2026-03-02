@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   MapPin,
@@ -223,15 +224,23 @@ function CopyButton({ text }: { text: string }) {
 ───────────────────────────────────────────── */
 function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: { keyItem: SportKey; onRevoke: (id: string) => void; onRestore: (id: string) => void; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
+        // Also close if clicked outside the dropdown (which is in portal)
+        const dropdown = document.getElementById(`action-menu-dropdown-${keyItem.id}`);
+        if (dropdown && !dropdown.contains(e.target as Node)) {
+          setOpen(false);
+          setPosition(null);
+        }
+      }
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [keyItem.id]);
 
   const items = [
     ...(keyItem.status === "confirmed"
@@ -246,10 +255,25 @@ function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: { keyItem: Sport
     { icon: <Trash2 className="w-3.5 h-3.5" />, label: "Delete Key", color: "#EF4444", action: () => onDelete(keyItem.id) },
   ];
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 160, // Align to right (160px is menu width)
+      });
+    } else {
+      setPosition(null);
+    }
+    setOpen((v) => !v);
+  };
+
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        ref={buttonRef}
+        onClick={handleToggle}
         className="flex items-center justify-center rounded-lg transition-all"
         style={{
           width: "28px",
@@ -272,15 +296,19 @@ function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: { keyItem: Sport
         <MoreVertical className="w-3.5 h-3.5" strokeWidth={1.75} />
       </button>
 
-      {open && (
+      {open && position && createPortal(
         <div
-          className="absolute right-0 z-50 rounded-xl overflow-hidden"
+          id={`action-menu-dropdown-${keyItem.id}`}
+          className="rounded-xl overflow-hidden"
           style={{
-            top: "34px",
+            position: "fixed",
+            top: `${position.top}px`,
+            left: `${position.left}px`,
             minWidth: "160px",
             backgroundColor: "#FFFFFF",
             boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
             border: "1px solid #E2E8F0",
+            zIndex: 9999,
           }}
         >
           {items.map((item) => (
@@ -290,6 +318,7 @@ function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: { keyItem: Sport
                 e.stopPropagation();
                 item.action?.();
                 setOpen(false);
+                setPosition(null);
               }}
               className="w-full flex items-center gap-2.5 px-3.5 py-2.5 transition-colors text-left"
               style={{
@@ -311,7 +340,8 @@ function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: { keyItem: Sport
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
