@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -737,6 +737,62 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
 
+  // Transform database AccessKey to SportKey format
+  const transformAccessKeyToSportKey = useCallback((accessKey: {
+    id: string;
+    code: string;
+    sportName: string;
+    sportEmoji: string;
+    status: KeyStatus;
+    claimedById: string | null;
+    createdAt: Date;
+  }): SportKey => {
+    const formatDate = (date: Date) => {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${months[date.getMonth()]} ${date.getDate()}`;
+    };
+
+    return {
+      id: accessKey.id,
+      code: accessKey.code,
+      sport: accessKey.sportName,
+      sportEmoji: accessKey.sportEmoji,
+      status: accessKey.status,
+      // User info (will be populated when user claims key)
+      userEmail: undefined,
+      userName: undefined,
+      userAvatar: undefined,
+      createdAt: formatDate(accessKey.createdAt),
+    };
+  }, []);
+
+  // Fetch keys from database - MUST be before useEffect (Rules of Hooks)
+  const fetchKeys = useCallback(async () => {
+    if (!event?.id) return;
+
+    setIsLoadingKeys(true);
+    try {
+      const result = await getKeysByEvent(event.id);
+      if (result.success && result.keys) {
+        const transformedKeys = result.keys.map(transformAccessKeyToSportKey);
+        setKeys(transformedKeys);
+        // Refresh events to update totalKeys in the store
+        await refreshEvents();
+      }
+    } catch (error) {
+      console.error("Failed to fetch keys:", error);
+    } finally {
+      setIsLoadingKeys(false);
+    }
+  }, [event?.id, transformAccessKeyToSportKey, refreshEvents]);
+
+  // Fetch keys from database when event changes - MUST be before early return (Rules of Hooks)
+  useEffect(() => {
+    if (event?.id) {
+      fetchKeys();
+    }
+  }, [event?.id, fetchKeys]);
+
   // Show loading state while events are being fetched
   if (isLoadingEvents || (eventId && !event)) {
     return (
@@ -777,62 +833,6 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   // Status handling - remove extra conversion since getEvents already converts
   const eventStatus = event?.status as EventStatusType || "upcoming";
   const eventStatusCfg = EVENT_STATUS_CFG[eventStatus] || EVENT_STATUS_CFG.upcoming;
-
-  // Transform database AccessKey to SportKey format
-  const transformAccessKeyToSportKey = (accessKey: {
-    id: string;
-    code: string;
-    sportName: string;
-    sportEmoji: string;
-    status: KeyStatus;
-    claimedById: string | null;
-    createdAt: Date;
-  }): SportKey => {
-    const formatDate = (date: Date) => {
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      return `${months[date.getMonth()]} ${date.getDate()}`;
-    };
-
-    return {
-      id: accessKey.id,
-      code: accessKey.code,
-      sport: accessKey.sportName,
-      sportEmoji: accessKey.sportEmoji,
-      status: accessKey.status,
-      // User info (will be populated when user claims key)
-      userEmail: undefined,
-      userName: undefined,
-      userAvatar: undefined,
-      createdAt: formatDate(accessKey.createdAt),
-    };
-  };
-
-  // Fetch keys from database when event changes
-  useEffect(() => {
-    if (event?.id) {
-      fetchKeys();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event?.id]);
-
-  const fetchKeys = async () => {
-    if (!event?.id) return;
-
-    setIsLoadingKeys(true);
-    try {
-      const result = await getKeysByEvent(event.id);
-      if (result.success && result.keys) {
-        const transformedKeys = result.keys.map(transformAccessKeyToSportKey);
-        setKeys(transformedKeys);
-        // Refresh events to update totalKeys in the store
-        await refreshEvents();
-      }
-    } catch (error) {
-      console.error("Failed to fetch keys:", error);
-    } finally {
-      setIsLoadingKeys(false);
-    }
-  };
 
   const handleRevoke = async (id: string) => {
     try {
