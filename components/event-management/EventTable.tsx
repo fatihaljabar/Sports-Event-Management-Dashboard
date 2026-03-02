@@ -10,6 +10,7 @@ interface EventTableProps {
   setDeleteConfirm: (id: string | null) => void;
   handlers: EventHandlers;
   isDeleting: boolean;
+  isLoading?: boolean;
 }
 
 export function EventTable({
@@ -20,6 +21,7 @@ export function EventTable({
   setDeleteConfirm,
   handlers,
   isDeleting,
+  isLoading = false,
 }: EventTableProps) {
   const columns = [
     { label: "Event Identity", width: "32%" },
@@ -61,7 +63,7 @@ export function EventTable({
 
         {/* Body */}
         <tbody>
-          {events.length === 0 ? (
+          {events.length === 0 && !isLoading ? (
             <tr>
               <td colSpan={6}>
                 <EmptyState />

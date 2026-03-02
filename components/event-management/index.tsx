@@ -38,6 +38,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
     sortDropdownRef,
     filtersDropdownRef,
     hasActiveFilters,
+    isLoading,
     currentPage,
     totalPages,
     setCurrentPage,
@@ -664,6 +665,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
             setDeleteConfirm={setDeleteConfirm}
             handlers={handlers}
             isDeleting={isDeleting}
+            isLoading={isLoading}
           />
 
           {/* ── Footer ── */}

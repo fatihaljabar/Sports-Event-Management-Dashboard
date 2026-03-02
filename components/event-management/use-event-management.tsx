@@ -26,6 +26,7 @@ import { ITEMS_PER_PAGE } from "./constants";
 export function useEventManagement() {
   const {
     events,
+    isLoading,
     deleteEvent: deleteEventFromStore,
     updateEvent: updateEventInStore,
     archiveEvent: archiveEventInStore,
@@ -423,6 +424,7 @@ export function useEventManagement() {
     setEditingEvent,
     sortDropdownRef,
     filtersDropdownRef,
+    isLoading,
 
     // Data
     convertedEvents,
