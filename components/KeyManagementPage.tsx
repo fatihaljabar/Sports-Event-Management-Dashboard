@@ -753,8 +753,10 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   const eventLogoUrl = event?.logoUrl;
   const eventTotalKeys = event?.totalKeys ?? 0; // Use 0 as default, not 1000 (no mock data)
   const eventIsMulti = event?.type === "multi";
-  const eventStatus = event?.status || "active";
-  const eventStatusCfg = EVENT_STATUS_CFG[eventStatus as EventStatusType] || EVENT_STATUS_CFG.active;
+  // Convert status to lowercase for config lookup (database uses UPCASE, config uses lowercase)
+  const eventStatusRaw = event?.status || "upcoming";
+  const eventStatus = eventStatusRaw.toLowerCase() as EventStatusType;
+  const eventStatusCfg = EVENT_STATUS_CFG[eventStatus] || EVENT_STATUS_CFG.upcoming;
 
   // Keys state - fetch from database
   const [keys, setKeys] = useState<SportKey[]>([]);
