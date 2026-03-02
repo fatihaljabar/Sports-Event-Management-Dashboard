@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ShieldOff, RotateCcw, Trash2 } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
 import { getKeysByEvent, revokeKey, restoreKey, deleteKey } from "@/app/actions/keys";
@@ -8,9 +9,29 @@ import { toast } from "sonner";
 import type { KeyStatus, SportKey } from "../constants";
 import { transformAccessKeyToSportKey } from "../utils";
 
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+
+/** Polling interval for keys data (10 seconds) */
+const KEYS_REFETCH_INTERVAL = 10000;
+
+/** Query key for fetching keys by event */
+const getKeysQueryKey = (eventId: string) => ["keys", eventId] as const;
+
+// ═══════════════════════════════════════════════════════════════
+// HOOK
+// ═══════════════════════════════════════════════════════════════
+
 /**
  * Custom hook for key management data and operations
  * Handles fetching, filtering, and CRUD operations for access keys
+ *
+ * Features:
+ * - Auto-polling every 10 seconds via TanStack Query
+ * - Pauses polling when tab is inactive (Page Visibility API)
+ * - Optimistic updates for revoke/restore/delete
+ * - Automatic cache invalidation
  */
 export function useKeyManagement(eventId: string | undefined) {
   const { getEventById, isLoading, refreshEvents } = useEvents();
@@ -18,100 +39,153 @@ export function useKeyManagement(eventId: string | undefined) {
 
   // Track if initial load is complete (to prevent blinking on auto-refresh)
   const isInitialLoad = useRef(true);
-  // Track last fetched event ID to prevent duplicate fetches on store refresh
-  const lastFetchedEventIdRef = useRef<string | null>(null);
 
-  // Keys state
+  // Keys state for optimistic updates
   const [keys, setKeys] = useState<SportKey[]>([]);
-  const [isLoadingKeys, setIsLoadingKeys] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
 
-  // Fetch keys from database
-  const fetchKeys = useCallback(async () => {
-    if (!event?.id) return;
+  // ═══════════════════════════════════════════════════════════════
+  // PAGE VISIBILITY TRACKING
+  // ═══════════════════════════════════════════════════════════════
 
-    setIsLoadingKeys(true);
-    try {
+  const [isTabVisible, setIsTabVisible] = useState(true);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FETCH KEYS WITH TANSTACK QUERY (POLLING)
+  // ═══════════════════════════════════════════════════════════════
+
+  const {
+    data: fetchedKeys = [],
+    isLoading: isLoadingKeys,
+    refetch: refetchKeys,
+  } = useQuery({
+    queryKey: getKeysQueryKey(event?.id ?? ""),
+    queryFn: async () => {
+      if (!event?.id) return [];
       const result = await getKeysByEvent(event.id);
       if (result.success && result.keys) {
-        const transformedKeys = result.keys.map(transformAccessKeyToSportKey);
-        setKeys(transformedKeys);
+        return result.keys.map(transformAccessKeyToSportKey);
       }
-    } catch (error) {
-      console.error("Failed to fetch keys:", error);
-    } finally {
-      setIsLoadingKeys(false);
-    }
-  }, [event?.id]);
+      throw new Error(result.error || "Failed to fetch keys");
+    },
+    enabled: !!event?.id,
+    refetchInterval: isTabVisible ? KEYS_REFETCH_INTERVAL : false, // Pause when tab hidden
+    refetchIntervalInBackground: false, // Never poll when tab is background
+    refetchOnWindowFocus: false, // Don't refetch on tab switch (we use interval)
+    staleTime: 5000, // Consider data fresh for 5 seconds
+    retry: 1, // Only retry once on failure
+  });
 
-  // Fetch keys when event changes
+  // Update local keys state when fetched data changes
   useEffect(() => {
-    // Only fetch if event ID actually changed (prevents duplicate fetches on store refresh)
-    if (event?.id && event.id !== lastFetchedEventIdRef.current) {
-      fetchKeys();
-      lastFetchedEventIdRef.current = event.id;
-      // Mark initial load as complete once we have the event
-      if (isInitialLoad.current) {
-        isInitialLoad.current = false;
-      }
+    if (fetchedKeys.length > 0 || keys.length === 0) {
+      setKeys(fetchedKeys);
     }
-  }, [event?.id, fetchKeys]);
+    if (isInitialLoad.current && fetchedKeys.length > 0) {
+      isInitialLoad.current = false;
+    }
+  }, [fetchedKeys]);
 
-  // Event handlers
+  // Manual fetch function (for use after mutations)
+  const fetchKeys = useCallback(() => {
+    refetchKeys();
+  }, [refetchKeys]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // EVENT HANDLERS (OPTIMISTIC UPDATES)
+  // ═══════════════════════════════════════════════════════════════
+
   const handleRevoke = useCallback(async (id: string) => {
+    // Optimistic update
+    setKeys((prev) =>
+      prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
+    );
+
     try {
       const result = await revokeKey(id);
       if (result.success) {
-        setKeys((prev) =>
-          prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
-        );
         toast.error("Key revoked successfully", {
           description: "The access key has been revoked.",
           icon: <ShieldOff className="w-5 h-5" />,
           className: "revoke-toast",
         });
+        // Refetch to ensure consistency with server
+        refetchKeys();
       } else {
+        // Revert on failure
+        setKeys((prev) =>
+          prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
+        );
         toast.error("Failed to revoke key", {
           description: result.error || "Please try again.",
         });
       }
     } catch (error) {
+      // Revert on error
+      setKeys((prev) =>
+        prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
+      );
       toast.error("An error occurred", {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     }
-  }, []);
+  }, [refetchKeys]);
 
   const handleRestore = useCallback(async (id: string) => {
+    // Optimistic update
+    setKeys((prev) =>
+      prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
+    );
+
     try {
       const result = await restoreKey(id);
       if (result.success) {
-        setKeys((prev) =>
-          prev.map((k) => (k.id === id ? { ...k, status: "available" as KeyStatus } : k))
-        );
         toast.success("Key restored successfully", {
           description: "The access key has been restored to available.",
           icon: <RotateCcw className="w-5 h-5" />,
           className: "restore-toast",
         });
+        refetchKeys();
       } else {
+        // Revert on failure
+        setKeys((prev) =>
+          prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
+        );
         toast.error("Failed to restore key", {
           description: result.error || "Please try again.",
         });
       }
     } catch (error) {
+      // Revert on error
+      setKeys((prev) =>
+        prev.map((k) => (k.id === id ? { ...k, status: "revoked" as KeyStatus } : k))
+      );
       toast.error("An error occurred", {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     }
-  }, []);
+  }, [refetchKeys]);
 
   const handleDelete = useCallback(async (id: string) => {
+    // Optimistic update
+    const previousKeys = keys;
+    setKeys((prev) => prev.filter((k) => k.id !== id));
+
     try {
       const result = await deleteKey(id);
       if (result.success) {
-        setKeys((prev) => prev.filter((k) => k.id !== id));
         // Refresh events to update totalKeys in the store
         await refreshEvents();
         toast("Key deleted successfully", {
@@ -119,17 +193,27 @@ export function useKeyManagement(eventId: string | undefined) {
           icon: <Trash2 className="w-5 h-5" />,
           className: "delete-toast",
         });
+        // Invalidate and refetch keys query
+        refetchKeys();
       } else {
+        // Revert on failure
+        setKeys(previousKeys);
         toast.error("Failed to delete key", {
           description: result.error || "Please try again.",
         });
       }
     } catch (error) {
+      // Revert on error
+      setKeys(previousKeys);
       toast.error("An error occurred", {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     }
-  }, [refreshEvents]);
+  }, [keys, refreshEvents, refetchKeys]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FILTERING & STATS
+  // ═══════════════════════════════════════════════════════════════
 
   // Filter keys based on search and status
   const filtered = keys.filter((k) => {
