@@ -729,6 +729,14 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   // Find event by eventId
   const event = eventId ? getEventById(eventId) : null;
 
+  // Keys state - MUST be declared before any conditional returns (Rules of Hooks)
+  const [keys, setKeys] = useState<SportKey[]>([]);
+  const [isLoadingKeys, setIsLoadingKeys] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+
   // Show loading state while events are being fetched
   if (isLoadingEvents || (eventId && !event)) {
     return (
@@ -769,14 +777,6 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   // Status handling - remove extra conversion since getEvents already converts
   const eventStatus = event?.status as EventStatusType || "upcoming";
   const eventStatusCfg = EVENT_STATUS_CFG[eventStatus] || EVENT_STATUS_CFG.upcoming;
-
-  // Keys state - fetch from database
-  const [keys, setKeys] = useState<SportKey[]>([]);
-  const [isLoadingKeys, setIsLoadingKeys] = useState(false);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | KeyStatus>("all");
-  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
 
   // Transform database AccessKey to SportKey format
   const transformAccessKeyToSportKey = (accessKey: {
