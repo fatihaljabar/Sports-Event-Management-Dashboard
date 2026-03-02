@@ -729,6 +729,9 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   // Find event by eventId
   const event = eventId ? getEventById(eventId) : null;
 
+  // Track if initial load is complete (to prevent blinking on auto-refresh)
+  const isInitialLoad = useRef(true);
+
   // Keys state - MUST be declared before any conditional returns (Rules of Hooks)
   const [keys, setKeys] = useState<SportKey[]>([]);
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
@@ -788,12 +791,17 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   useEffect(() => {
     if (event?.id) {
       fetchKeys();
+      // Mark initial load as complete once we have the event
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.id]); // Only depend on event.id, NOT fetchKeys to prevent infinite loops
 
   // Don't render anything while events are loading (prevents "unknown event" flash)
-  if (isLoading || (eventId && !event)) {
+  // Only apply to initial load, not auto-refreshes (to prevent blinking)
+  if (isInitialLoad.current && (isLoading || (eventId && !event))) {
     return null;
   }
 
