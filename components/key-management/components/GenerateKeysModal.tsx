@@ -12,6 +12,8 @@ interface GenerateKeysModalProps {
   eventId: string;
   eventSports?: SportCategory[];
   onKeysGenerated: () => void;
+  remainingQuota?: number;
+  totalQuota?: number;
 }
 
 interface AvailableSport {
@@ -26,6 +28,8 @@ export function GenerateKeysModal({
   eventId,
   eventSports,
   onKeysGenerated,
+  remainingQuota = 0,
+  totalQuota = 0,
 }: GenerateKeysModalProps) {
   // Convert SportCategory[] to AvailableSport[] format
   const availableSports: AvailableSport[] = eventSports && eventSports.length > 0
@@ -314,7 +318,7 @@ export function GenerateKeysModal({
               Generating{" "}
               <strong>{qty || 0}</strong> keys will consume{" "}
               <strong>{qty || 0}</strong> from your remaining quota. Current available:{" "}
-              <strong>550 slots</strong>.
+              <strong>{remainingQuota} slots</strong> (total: {totalQuota}).
             </p>
           </div>
         </div>

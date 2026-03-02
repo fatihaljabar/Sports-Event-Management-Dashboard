@@ -98,6 +98,8 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
           eventId={event?.id ?? ""}
           eventSports={event?.sports}
           onKeysGenerated={fetchKeys}
+          remainingQuota={total - generated}
+          totalQuota={total}
         />
       )}
     </main>

@@ -274,7 +274,7 @@ async function uploadEventLogo(
       return null;
     }
 
-    console.log("[UPLOAD] Uploading event logo to path:", storagePath, "Size:", buffer.length, "bytes");
+    devLog.log("[UPLOAD] Uploading event logo to path:", storagePath, "Size:", buffer.length, "bytes");
 
     // Check if bucket exists first
     const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
@@ -284,7 +284,7 @@ async function uploadEventLogo(
     }
 
     const bucketExists = buckets?.some(b => b.id === 'event-logos');
-    console.log("[UPLOAD] Bucket 'event-logos' exists:", bucketExists);
+    devLog.log("[UPLOAD] Bucket 'event-logos' exists:", bucketExists);
 
     if (!bucketExists) {
       console.error("[UPLOAD] Bucket 'event-logos' does not exist! Please create it in Supabase.");
@@ -309,14 +309,14 @@ async function uploadEventLogo(
       return null;
     }
 
-    console.log("[UPLOAD] Upload successful:", uploadData?.path);
+    devLog.log("[UPLOAD] Upload successful:", uploadData?.path);
 
     // Get public URL
     const { data: publicUrlData } = supabase.storage
       .from("event-logos")
       .getPublicUrl(storagePath);
 
-    console.log("[UPLOAD] Public URL:", publicUrlData.publicUrl);
+    devLog.log("[UPLOAD] Public URL:", publicUrlData.publicUrl);
 
     return publicUrlData.publicUrl;
   } catch (error) {
@@ -335,7 +335,7 @@ async function uploadSponsorLogos(
   const results: SponsorLogoData[] = [];
   const supabase = createServiceClient();
 
-  console.log(`[SPONSOR UPLOAD] Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
+  devLog.log(`[SPONSOR UPLOAD] Starting upload of ${sponsorLogos.length} sponsor logos for event ${eventId}`);
 
   const globalTimestamp = Date.now(); // Single timestamp for all uploads
   const sanitizedEventId = eventId.replace(/[^a-zA-Z0-9-]/g, "");
@@ -378,7 +378,7 @@ async function uploadSponsorLogos(
         continue;
       }
 
-      console.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Uploading to:`, storagePath, "Size:", buffer.length, "bytes");
+      devLog.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Uploading to:`, storagePath, "Size:", buffer.length, "bytes");
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("event-logos")
@@ -395,20 +395,20 @@ async function uploadSponsorLogos(
         continue;
       }
 
-      console.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Upload successful:`, uploadData?.path);
+      devLog.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Upload successful:`, uploadData?.path);
 
       const { data: publicUrlData } = supabase.storage
         .from("event-logos")
         .getPublicUrl(storagePath);
 
       results.push({ name: sanitizedName, url: publicUrlData.publicUrl });
-      console.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
+      devLog.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
     } catch (error) {
       console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Exception:`, error);
     }
   }
 
-  console.log(`[SPONSOR UPLOAD] Complete. ${results.length}/${sponsorLogos.length} successful.`);
+  devLog.log(`[SPONSOR UPLOAD] Complete. ${results.length}/${sponsorLogos.length} successful.`);
   return results;
 }
 
