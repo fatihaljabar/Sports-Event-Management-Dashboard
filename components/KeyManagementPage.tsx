@@ -731,6 +731,8 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
 
   // Track if initial load is complete (to prevent blinking on auto-refresh)
   const isInitialLoad = useRef(true);
+  // Track last fetched event ID to prevent duplicate fetches on store refresh
+  const lastFetchedEventIdRef = useRef<string | null>(null);
 
   // Keys state - MUST be declared before any conditional returns (Rules of Hooks)
   const [keys, setKeys] = useState<SportKey[]>([]);
@@ -789,8 +791,10 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
 
   // Fetch keys from database when event changes - MUST be before early return (Rules of Hooks)
   useEffect(() => {
-    if (event?.id) {
+    // Only fetch if event ID actually changed (prevents duplicate fetches on store refresh)
+    if (event?.id && event.id !== lastFetchedEventIdRef.current) {
       fetchKeys();
+      lastFetchedEventIdRef.current = event.id;
       // Mark initial load as complete once we have the event
       if (isInitialLoad.current) {
         isInitialLoad.current = false;
