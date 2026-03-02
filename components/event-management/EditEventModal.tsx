@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Trophy, X, Calendar, Globe, ImagePlus } from "lucide-react";
+import { getGoogleMaps, loadGoogleMapsScript } from "@/lib/google-maps/loader";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { StyledInput } from "@/components/ui/StyledInput";
 import { SectionDivider } from "@/components/ui/SectionDivider";
@@ -50,7 +51,44 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
   const [eventName, setEventName] = useState(event.name);
   const [eventType, setEventType] = useState<"single" | "multi">(event.type);
   const [selectedSports, setSelectedSports] = useState<SportCategory[]>([]);
-  const [location, setLocation] = useState(""); // Combined location for LocationPicker
+  // Initialize location with the event's location string to avoid empty state on first render
+  const initialLocationString = event.location.venue
+    ? `${event.location.city}, ${event.location.venue}`
+    : event.location.city;
+  const [location, setLocation] = useState(initialLocationString);
+  const [locationCoordinates, setLocationCoordinates] = useState<{ lat: number; lng: number } | null>(
+    event.location.coordinates || null
+  ); // Store coordinates separately for map modal
+
+  // Geocode location if coordinates are missing (for events created before coordinates were stored)
+  useEffect(() => {
+    // Only geocode if we don't have coordinates but have a location string
+    if (locationCoordinates === null && location && location.trim().length > 0) {
+      const geocodeLocation = () => {
+        const maps = getGoogleMaps();
+        if (!maps?.Geocoder) {
+          loadGoogleMapsScript(() => {
+            setTimeout(geocodeLocation, 500);
+          });
+          return;
+        }
+
+        const geocoder = new maps.Geocoder();
+        geocoder.geocode(
+          { address: location },
+          (results: any[], status: string) => {
+            if (status === maps.GeocoderStatus.OK && results?.[0]?.geometry?.location) {
+              const lat = results[0].geometry.location.lat();
+              const lng = results[0].geometry.location.lng();
+              setLocationCoordinates({ lat, lng });
+            }
+          }
+        );
+      };
+
+      geocodeLocation();
+    }
+  }, []); // Run once on mount
   const [timezone, setTimezone] = useState(event.location.timezone);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -124,7 +162,10 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
     if (timezoneValue) {
       setTimezone(timezoneValue);
     }
-    // Coordinates parameter received from LocationPicker
+    // Store coordinates for map modal - update when new coordinates are provided
+    if (coordinates) {
+      setLocationCoordinates(coordinates);
+    }
   };
 
   const handleAddSponsorLogo = (file: { name: string; size: string; preview: string | null }) => {
@@ -184,7 +225,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
         })),
         keepExistingLogo,
         keepExistingSponsors,
-        coordinates: event.location.coordinates, // Use event's existing coordinates
+        coordinates: locationCoordinates || event.location.coordinates, // Use updated coordinates from map or fall back to existing
       });
 
       if (result.success) {
@@ -355,10 +396,9 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
               <div>
                 <FieldLabel required>Host City / Venue</FieldLabel>
                 <LocationPicker
-                  key={`location-${event.id}`}
                   value={location}
                   onChange={handleLocationChange}
-                  initialCoordinates={event.location.coordinates}
+                  initialCoordinates={locationCoordinates}
                 />
                 {errors.location && (
                   <p style={{ color: "#EF4444", fontSize: "0.7rem", marginTop: "4px" }}>{errors.location}</p>
