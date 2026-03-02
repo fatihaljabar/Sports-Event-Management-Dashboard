@@ -52,7 +52,6 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
   const [selectedSports, setSelectedSports] = useState<SportCategory[]>([]);
   const [location, setLocation] = useState(""); // Combined location for LocationPicker
   const [timezone, setTimezone] = useState(event.location.timezone);
-  const [locationCoordinates, setLocationCoordinates] = useState<{ lat: number; lng: number } | null>(event.location.coordinates || null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">(event.visibility);
@@ -125,11 +124,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
     if (timezoneValue) {
       setTimezone(timezoneValue);
     }
-    if (coordinates) {
-      setLocationCoordinates(coordinates);
-    } else {
-      setLocationCoordinates(null);
-    }
+    // Coordinates parameter received from LocationPicker
   };
 
   const handleAddSponsorLogo = (file: { name: string; size: string; preview: string | null }) => {
@@ -189,7 +184,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
         })),
         keepExistingLogo,
         keepExistingSponsors,
-        coordinates: locationCoordinates,
+        coordinates: event.location.coordinates, // Use event's existing coordinates
       });
 
       if (result.success) {
@@ -363,7 +358,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
                   key={`location-${event.id}`}
                   value={location}
                   onChange={handleLocationChange}
-                  initialCoordinates={locationCoordinates}
+                  initialCoordinates={event.location.coordinates}
                 />
                 {errors.location && (
                   <p style={{ color: "#EF4444", fontSize: "0.7rem", marginTop: "4px" }}>{errors.location}</p>
