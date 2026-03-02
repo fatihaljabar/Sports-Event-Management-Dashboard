@@ -808,6 +808,32 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
     return evt?.sports?.[0]?.emoji || "🏆";
   };
 
+  // Calculate status dynamically based on dates (same logic as useEventManagement)
+  const getCalculatedStatus = (evt: typeof event): EventStatusType => {
+    if (!evt) return "upcoming";
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(evt.startDate);
+    const endDate = new Date(evt.endDate);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+
+    // Use database status for archived
+    if (evt.status === "archived") {
+      return "archived";
+    }
+    // Calculate based on dates
+    if (today > endDate) {
+      return "completed";
+    } else if (today >= startDate && today <= endDate) {
+      return "active";
+    } else {
+      return "upcoming";
+    }
+  };
+
   // Event data to display - remove all mock data fallbacks
   const eventDisplayName = event?.name ?? "Unknown Event";
   const eventDisplayLocation = event?.location.city ?? "Unknown Location";
@@ -819,8 +845,8 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
   const eventTotalKeys = event?.totalKeys ?? 0;
   const eventIsMulti = event?.type === "multi";
 
-  // Status handling - remove extra conversion since getEvents already converts
-  const eventStatus = event?.status as EventStatusType || "upcoming";
+  // Status handling - calculate dynamically based on dates
+  const eventStatus = getCalculatedStatus(event);
   const eventStatusCfg = EVENT_STATUS_CFG[eventStatus] || EVENT_STATUS_CFG.upcoming;
 
   const handleRevoke = async (id: string) => {
