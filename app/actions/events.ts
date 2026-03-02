@@ -241,13 +241,13 @@ async function uploadEventLogo(
     // Validate file extension with improved security
     const ext = validateFileExtension(fileName);
     if (!ext) {
-      console.error("Invalid file extension:", fileName);
+      devLog.error("Invalid file extension:", fileName);
       return null;
     }
 
     // Validate file size before processing
     if (!validateBase64Size(base64, MAX_FILE_SIZE)) {
-      console.error("File size exceeds limit:", fileName);
+      devLog.error("File size exceeds limit:", fileName);
       return null;
     }
 
@@ -270,7 +270,7 @@ async function uploadEventLogo(
 
     // Double-check buffer size
     if (buffer.length > MAX_FILE_SIZE) {
-      console.error("Buffer size exceeds limit:", buffer.length);
+      devLog.error("Buffer size exceeds limit:", buffer.length);
       return null;
     }
 
@@ -279,7 +279,7 @@ async function uploadEventLogo(
     // Check if bucket exists first
     const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
     if (bucketError) {
-      console.error("[UPLOAD] Error listing buckets:", bucketError);
+      devLog.error("[UPLOAD] Error listing buckets:", bucketError);
       return null;
     }
 
@@ -287,8 +287,8 @@ async function uploadEventLogo(
     devLog.log("[UPLOAD] Bucket 'event-logos' exists:", bucketExists);
 
     if (!bucketExists) {
-      console.error("[UPLOAD] Bucket 'event-logos' does not exist! Please create it in Supabase.");
-      console.error("[UPLOAD] Run the SQL in supabase-storage-policy.sql to create the bucket.");
+      devLog.error("[UPLOAD] Bucket 'event-logos' does not exist! Please create it in Supabase.");
+      devLog.error("[UPLOAD] Run the SQL in supabase-storage-policy.sql to create the bucket.");
       return null;
     }
 
@@ -301,7 +301,7 @@ async function uploadEventLogo(
       });
 
     if (uploadError) {
-      console.error("[UPLOAD] Supabase upload error:", {
+      devLog.error("[UPLOAD] Supabase upload error:", {
         message: uploadError.message,
         statusCode: uploadError.statusCode,
         name: uploadError.name
@@ -320,7 +320,7 @@ async function uploadEventLogo(
 
     return publicUrlData.publicUrl;
   } catch (error) {
-    console.error("[UPLOAD] Exception in uploadEventLogo:", error);
+    devLog.error("[UPLOAD] Exception in uploadEventLogo:", error);
     return null;
   }
 }
@@ -349,13 +349,13 @@ async function uploadSponsorLogos(
       // Validate file extension with improved security
       const ext = validateFileExtension(sponsor.fileName);
       if (!ext) {
-        console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Invalid extension:`, sponsor.fileName);
+        devLog.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Invalid extension:`, sponsor.fileName);
         continue;
       }
 
       // Validate file size
       if (!validateBase64Size(sponsor.base64, MAX_FILE_SIZE)) {
-        console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Exceeds size limit`);
+        devLog.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Exceeds size limit`);
         continue;
       }
 
@@ -374,7 +374,7 @@ async function uploadSponsorLogos(
 
       // Double-check buffer size
       if (buffer.length > MAX_FILE_SIZE) {
-        console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Buffer size exceeds limit:`, buffer.length);
+        devLog.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Buffer size exceeds limit:`, buffer.length);
         continue;
       }
 
@@ -388,7 +388,7 @@ async function uploadSponsorLogos(
         });
 
       if (uploadError) {
-        console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Upload error:`, {
+        devLog.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Upload error:`, {
           message: uploadError.message,
           statusCode: uploadError.statusCode
         });
@@ -404,7 +404,7 @@ async function uploadSponsorLogos(
       results.push({ name: sanitizedName, url: publicUrlData.publicUrl });
       devLog.log(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Public URL:`, publicUrlData.publicUrl);
     } catch (error) {
-      console.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Exception:`, error);
+      devLog.error(`[SPONSOR UPLOAD] [${i+1}/${sponsorLogos.length}] Exception:`, error);
     }
   }
 
@@ -550,7 +550,7 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
 
     return { success: true, event: transformedEvent };
   } catch (error) {
-    console.error("Error creating event:", error);
+    devLog.error("Error creating event:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.CREATE_FAILED,
@@ -589,7 +589,7 @@ export async function getEvents(): Promise<SportEvent[]> {
       sponsorLogos: (event.sponsorLogos as unknown as SponsorLogoData[]) ?? undefined,
     }));
   } catch (error) {
-    console.error("Error fetching events:", error);
+    devLog.error("Error fetching events:", error);
     return [];
   }
 }
@@ -627,7 +627,7 @@ export async function getEventById(eventId: string): Promise<SportEvent | null> 
       sponsorLogos: (event.sponsorLogos as unknown as SponsorLogoData[]) ?? undefined,
     };
   } catch (error) {
-    console.error("Error fetching event:", error);
+    devLog.error("Error fetching event:", error);
     return null;
   }
 }
@@ -680,13 +680,13 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
             .from("event-logos")
             .remove([storagePath]);
           if (deleteError) {
-            console.error("Error deleting event logo from storage:", deleteError);
+            devLog.error("Error deleting event logo from storage:", deleteError);
           } else {
             devLog.log("Deleted event logo:", storagePath);
           }
         }
       } catch (error) {
-        console.error("Exception deleting event logo:", error);
+        devLog.error("Exception deleting event logo:", error);
       }
     }
 
@@ -704,13 +704,13 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
               .from("event-logos")
               .remove([storagePath]);
             if (deleteError) {
-              console.error("Error deleting sponsor logo from storage:", deleteError);
+              devLog.error("Error deleting sponsor logo from storage:", deleteError);
             } else {
               devLog.log("Deleted sponsor logo:", storagePath);
             }
           }
         } catch (error) {
-          console.error("Exception deleting sponsor logo:", error);
+          devLog.error("Exception deleting sponsor logo:", error);
         }
       }
     }
@@ -732,7 +732,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting event:", error);
+    devLog.error("Error deleting event:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.DELETE_FAILED,
@@ -868,7 +868,7 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
               await supabase.storage.from("event-logos").remove([storagePath]);
             }
           } catch (error) {
-            console.error("Error deleting old sponsor logo:", error);
+            devLog.error("Error deleting old sponsor logo:", error);
           }
         }
       }
@@ -933,7 +933,7 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
 
     return { success: true, event: transformedEvent };
   } catch (error) {
-    console.error("Error updating event:", error);
+    devLog.error("Error updating event:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.UPDATE_FAILED,
@@ -984,7 +984,7 @@ export async function archiveEvent(eventId: string): Promise<ArchiveEventResult>
 
     return { success: true };
   } catch (error) {
-    console.error("Error archiving event:", error);
+    devLog.error("Error archiving event:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.ARCHIVE_FAILED,
@@ -1050,7 +1050,7 @@ export async function unarchiveEvent(eventId: string): Promise<UnarchiveEventRes
 
     return { success: true };
   } catch (error) {
-    console.error("Error unarchiving event:", error);
+    devLog.error("Error unarchiving event:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.UNARCHIVE_FAILED,
@@ -1152,7 +1152,7 @@ export async function duplicateEvent(eventId: string): Promise<DuplicateEventRes
 
     return { success: true, event: transformedEvent };
   } catch (error) {
-    console.error("Error duplicating event:", error);
+    devLog.error("Error duplicating event:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.DUPLICATE_FAILED,
@@ -1228,7 +1228,7 @@ export async function exportEventData(eventId: string): Promise<ExportEventResul
 
     return { success: true, data: jsonString, filename };
   } catch (error) {
-    console.error("Error exporting event data:", error);
+    devLog.error("Error exporting event data:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.EXPORT_FAILED,
