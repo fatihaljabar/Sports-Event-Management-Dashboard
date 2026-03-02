@@ -168,6 +168,25 @@ async function getClientIP(): Promise<string> {
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
+/**
+ * Dev-only logger to prevent console.log in production
+ */
+const devLog = {
+  log: (...args: unknown[]) => {
+    if (isDevelopment) {
+      console.log(...args);
+    }
+  },
+  error: (...args: unknown[]) => {
+    if (isDevelopment) {
+      console.error(...args);
+    }
+  },
+  warn: (...args: unknown[]) => {
+    console.warn(...args);
+  },
+};
+
 async function verifyRequestOrigin(): Promise<boolean> {
   try {
     const headersList = await headers();
@@ -323,7 +342,7 @@ export async function generateKeys(data: GenerateKeysData): Promise<GenerateKeys
 
     return { success: true, keys: transformedKeys };
   } catch (error) {
-    console.error("Error generating keys:", error);
+    devLog.error("Error generating keys:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.GENERATE_FAILED,
@@ -360,7 +379,7 @@ export async function getKeysByEvent(eventId: string): Promise<GetKeysResult> {
 
     return { success: true, keys: transformedKeys };
   } catch (error) {
-    console.error("Error fetching keys:", error);
+    devLog.error("Error fetching keys:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.FETCH_FAILED,
@@ -403,7 +422,7 @@ export async function revokeKey(keyId: string): Promise<RevokeKeyResult> {
 
     return { success: true };
   } catch (error) {
-    console.error("Error revoking key:", error);
+    devLog.error("Error revoking key:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.REVOKE_FAILED,
@@ -446,7 +465,7 @@ export async function restoreKey(keyId: string): Promise<RestoreKeyResult> {
 
     return { success: true };
   } catch (error) {
-    console.error("Error restoring key:", error);
+    devLog.error("Error restoring key:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.RESTORE_FAILED,
@@ -510,7 +529,7 @@ export async function deleteKey(keyId: string): Promise<DeleteKeyResult> {
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting key:", error);
+    devLog.error("Error deleting key:", error);
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.DELETE_FAILED,
