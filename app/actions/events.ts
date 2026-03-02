@@ -571,7 +571,7 @@ export async function getEvents(): Promise<SportEvent[]> {
       id: event.eventId,
       name: event.name,
       type: event.type as "single" | "multi",
-      status: event.status as SportEvent["status"],
+      status: (event.status?.toLowerCase() || "upcoming") as SportEvent["status"], // Convert DB uppercase to lowercase
       sports: event.sports as unknown as SportEvent["sports"],
       location: {
         city: event.locationCity,
