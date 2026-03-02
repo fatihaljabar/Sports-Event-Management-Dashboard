@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trophy, X, Calendar, Users, Globe, ImagePlus } from "lucide-react";
+import { Trophy, X, Calendar, Globe, ImagePlus } from "lucide-react";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { StyledInput } from "@/components/ui/StyledInput";
 import { SectionDivider } from "@/components/ui/SectionDivider";
@@ -55,7 +55,6 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
   const [locationCoordinates, setLocationCoordinates] = useState<{ lat: number; lng: number } | null>(event.location.coordinates || null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [quota, setQuota] = useState(event.maxParticipants.toString());
   const [visibility, setVisibility] = useState<"public" | "private">(event.visibility);
   const [eventLogo, setEventLogo] = useState<{ name: string; size: string; preview: string | null } | null>(null);
   const [sponsorLogos, setSponsorLogos] = useState<Array<{ name: string; size: string; preview: string | null }>>([]);
@@ -154,7 +153,6 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
       newErrors.endDate = "End date must be after start date";
     }
-    if (!quota || parseInt(quota) < 1) newErrors.quota = "Valid quota is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -179,8 +177,8 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
         locationTimezone: timezone,
         startDate,
         endDate,
-        maxParticipants: parseInt(quota),
-        totalKeys: parseInt(quota) * selectedSports.length,
+        maxParticipants: event.maxParticipants, // Keep existing value
+        totalKeys: event.totalKeys, // Keep existing value
         visibility,
         logoBase64: eventLogo?.preview && !keepExistingLogo ? eventLogo.preview : undefined,
         logoFileName: eventLogo?.name,
@@ -213,8 +211,6 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
   const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
-
-  const totalKeys = quota ? parseInt(quota) * selectedSports.length : 0;
 
   return (
     <div
@@ -457,47 +453,6 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
                 />
                 {/* Dynamic timezone alert */}
                 {timezone && <TimezoneAlert timezone={timezone} />}
-              </div>
-
-              {/* Participant Quota */}
-              <div>
-                <FieldLabel required>Max Participants / Keys</FieldLabel>
-                <StyledInput
-                  value={quota}
-                  onChange={setQuota}
-                  placeholder="e.g. 1000"
-                  icon={<Users className="w-4 h-4" strokeWidth={1.75} />}
-                />
-                {errors.quota && (
-                  <p style={{ color: "#EF4444", fontSize: "0.7rem", marginTop: "4px" }}>{errors.quota}</p>
-                )}
-                {quota && selectedSports.length > 0 && (
-                  <div
-                    className="flex items-center gap-2 mt-2 rounded-lg px-3 py-2"
-                    style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE" }}
-                  >
-                    <Users className="w-3.5 h-3.5" strokeWidth={1.75} style={{ color: "#2563EB" }} />
-                    <span
-                      style={{
-                        color: "#1E40AF",
-                        fontSize: "0.7rem",
-                        fontFamily: '"Inter", sans-serif',
-                        fontWeight: 500,
-                      }}
-                    >
-                      Total keys: {totalKeys.toLocaleString()} keys
-                    </span>
-                    <span
-                      style={{
-                        color: "#64748B",
-                        fontSize: "0.65rem",
-                        fontFamily: '"Inter", sans-serif',
-                      }}
-                    >
-                      ({quota} participants × {selectedSports.length} sport{selectedSports.length > 1 ? "s" : ""})
-                    </span>
-                  </div>
-                )}
               </div>
 
               <SectionDivider label="Branding Assets" />
