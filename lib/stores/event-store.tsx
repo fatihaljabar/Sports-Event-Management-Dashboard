@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SportEvent } from "@/lib/types/event";
 import { getEvents as fetchEvents } from "@/app/actions/events";
 
@@ -40,15 +40,11 @@ const EVENTS_QUERY_KEY = ["events"] as const;
  * Features:
  * - Auto-polling every 10 seconds via TanStack Query
  * - Pauses polling when tab is inactive (Page Visibility API)
- * - Optimistic updates for mutations (add, update, delete, etc.)
- * - Automatic cache invalidation with query keys
+ * - Optimistic updates via queryClient.setQueryData
+ * - No race conditions with fetched data
  */
 export function EventProvider({ children }: { children: React.ReactNode }) {
-  // Local state for optimistic updates
-  const [optimisticEvents, setOptimisticEvents] = useState<SportEvent[]>([]);
-
-  // Track if we have optimistic updates pending
-  const hasOptimisticUpdatesRef = useRef(false);
+  const queryClient = useQueryClient();
 
   // ═══════════════════════════════════════════════════════════════
   // PAGE VISIBILITY TRACKING
@@ -60,7 +56,6 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     const handleVisibilityChange = () => {
       setIsTabVisible(!document.hidden);
     };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -72,8 +67,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   // ═══════════════════════════════════════════════════════════════
 
   const {
-    data: fetchedEvents = [],
-    isLoading: isLoading,
+    data: events = [],
+    isLoading,
     refetch: refetchEvents,
   } = useQuery({
     queryKey: EVENTS_QUERY_KEY,
@@ -81,18 +76,15 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       const events = await fetchEvents();
       return events;
     },
-    refetchInterval: isTabVisible ? EVENTS_REFETCH_INTERVAL : false, // Pause when tab hidden
-    refetchIntervalInBackground: false, // Never poll when tab is background
-    refetchOnWindowFocus: false, // Don't refetch on tab switch (we use interval)
-    staleTime: 5000, // Consider data fresh for 5 seconds
-    retry: 1, // Only retry once on failure
+    refetchInterval: isTabVisible ? EVENTS_REFETCH_INTERVAL : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5000,
+    retry: 1,
   });
 
-  // Use optimistic events if we have pending updates, otherwise use fetched data
-  const events = hasOptimisticUpdatesRef.current ? optimisticEvents : fetchedEvents;
-
   // ═══════════════════════════════════════════════════════════════
-  // MUTATION HANDLERS (OPTIMISTIC UPDATES)
+  // MUTATION HANDLERS (OPTIMISTIC UPDATES VIA CACHE)
   // ═══════════════════════════════════════════════════════════════
 
   const refreshEvents = useCallback(async () => {
@@ -100,52 +92,47 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   }, [refetchEvents]);
 
   const addEvent = useCallback((event: SportEvent) => {
-    setOptimisticEvents((prev) => [...prev, event]);
-    hasOptimisticUpdatesRef.current = true;
-  }, []);
+    // Optimistic update via cache
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return [...(old ?? []), event];
+    });
+  }, [queryClient]);
 
   const updateEvent = useCallback((id: string, updates: Partial<SportEvent>) => {
-    setOptimisticEvents((prev) =>
-      prev.map((event) => (event.id === id ? { ...event, ...updates } : event))
-    );
-    hasOptimisticUpdatesRef.current = true;
-  }, []);
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return old?.map((event) => (event.id === id ? { ...event, ...updates } : event)) ?? [];
+    });
+  }, [queryClient]);
 
   const deleteEvent = useCallback((id: string) => {
-    setOptimisticEvents((prev) => prev.filter((event) => event.id !== id));
-    hasOptimisticUpdatesRef.current = true;
-  }, []);
+    // Optimistic update via cache
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return old?.filter((event) => event.id !== id) ?? [];
+    });
+  }, [queryClient]);
 
   const archiveEvent = useCallback((id: string) => {
-    setOptimisticEvents((prev) =>
-      prev.map((event) => (event.id === id ? { ...event, status: "archived" as const } : event))
-    );
-    hasOptimisticUpdatesRef.current = true;
-  }, []);
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return old?.map((event) => (event.id === id ? { ...event, status: "archived" as const } : event)) ?? [];
+    });
+  }, [queryClient]);
 
   const unarchiveEvent = useCallback((id: string, newStatus: SportEvent["status"]) => {
-    setOptimisticEvents((prev) =>
-      prev.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
-    );
-    hasOptimisticUpdatesRef.current = true;
-  }, []);
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return old?.map((event) => (event.id === id ? { ...event, status: newStatus } : event)) ?? [];
+    });
+  }, [queryClient]);
 
   const duplicateEvent = useCallback((newEvent: SportEvent) => {
-    setOptimisticEvents((prev) => [...prev, newEvent]);
-    hasOptimisticUpdatesRef.current = true;
-  }, []);
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return [...(old ?? []), newEvent];
+    });
+  }, [queryClient]);
 
   const getEventById = useCallback(
     (id: string) => events.find((event) => event.id === id),
     [events]
   );
-
-  // Clear optimistic updates flag after data is fetched from server
-  useEffect(() => {
-    if (fetchedEvents.length > 0 && hasOptimisticUpdatesRef.current) {
-      hasOptimisticUpdatesRef.current = false;
-    }
-  }, [fetchedEvents]);
 
   return (
     <EventContext.Provider
@@ -181,10 +168,7 @@ export function useEvents() {
 
 /**
  * Hook to invalidate events query (for use after mutations)
- * This can be imported in Server Actions or mutation handlers
  */
-import { useQueryClient } from "@tanstack/react-query";
-
 export function useInvalidateEvents() {
   const queryClient = useQueryClient();
 
