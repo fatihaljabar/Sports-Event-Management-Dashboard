@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SportEvent } from "@/lib/types/event";
 import { getEvents as fetchEvents } from "@/app/actions/events";
 
@@ -19,75 +20,114 @@ interface EventContextType {
 
 const EventContext = createContext<EventContextType | undefined>(undefined);
 
-// Auto-refresh interval: every 10 seconds
-const AUTO_REFRESH_INTERVAL = 10000;
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════
 
+/** Polling interval for events data (10 seconds) */
+const EVENTS_REFETCH_INTERVAL = 10000;
+
+/** Query key for fetching all events */
+const EVENTS_QUERY_KEY = ["events"] as const;
+
+// ═══════════════════════════════════════════════════════════════
+// PROVIDER
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * EventProvider - Manages events state with TanStack Query polling
+ *
+ * Features:
+ * - Auto-polling every 10 seconds via TanStack Query
+ * - Pauses polling when tab is inactive (Page Visibility API)
+ * - Optimistic updates via queryClient.setQueryData
+ * - No race conditions with fetched data
+ */
 export function EventProvider({ children }: { children: React.ReactNode }) {
-  const [events, setEvents] = useState<SportEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const isAutoRefreshEnabled = useRef(true);
+  const queryClient = useQueryClient();
 
-  // Load events from database on mount
+  // ═══════════════════════════════════════════════════════════════
+  // PAGE VISIBILITY TRACKING
+  // ═══════════════════════════════════════════════════════════════
+
+  const [isTabVisible, setIsTabVisible] = useState(true);
+
   useEffect(() => {
-    loadEvents();
+    const handleVisibilityChange = () => {
+      setIsTabVisible(!document.hidden);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
-  // Auto-refresh events every 10 seconds
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      if (isAutoRefreshEnabled.current) {
-        await loadEvents();
-      }
-    }, AUTO_REFRESH_INTERVAL);
+  // ═══════════════════════════════════════════════════════════════
+  // FETCH EVENTS WITH TANSTACK QUERY (POLLING)
+  // ═══════════════════════════════════════════════════════════════
 
-    return () => clearInterval(interval);
-  }, []);
+  const {
+    data: events = [],
+    isLoading,
+    refetch: refetchEvents,
+  } = useQuery({
+    queryKey: EVENTS_QUERY_KEY,
+    queryFn: async () => {
+      const events = await fetchEvents();
+      return events;
+    },
+    refetchInterval: isTabVisible ? EVENTS_REFETCH_INTERVAL : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5000,
+    retry: 1,
+  });
 
-  const loadEvents = async () => {
-    setIsLoading(true);
-    try {
-      const fetchedEvents = await fetchEvents();
-      setEvents(fetchedEvents);
-    } catch (error) {
-      console.error("Failed to load events:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ═══════════════════════════════════════════════════════════════
+  // MUTATION HANDLERS (OPTIMISTIC UPDATES VIA CACHE)
+  // ═══════════════════════════════════════════════════════════════
 
   const refreshEvents = useCallback(async () => {
-    await loadEvents();
-  }, []);
+    await refetchEvents();
+  }, [refetchEvents]);
 
   const addEvent = useCallback((event: SportEvent) => {
-    setEvents((prev) => [...prev, event]);
-  }, []);
+    // Optimistic update via cache
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return [...(old ?? []), event];
+    });
+  }, [queryClient]);
 
   const updateEvent = useCallback((id: string, updates: Partial<SportEvent>) => {
-    setEvents((prev) =>
-      prev.map((event) => (event.id === id ? { ...event, ...updates } : event))
-    );
-  }, []);
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return old?.map((event) => (event.id === id ? { ...event, ...updates } : event)) ?? [];
+    });
+  }, [queryClient]);
 
   const deleteEvent = useCallback((id: string) => {
-    setEvents((prev) => prev.filter((event) => event.id !== id));
-  }, []);
+    // Optimistic update via cache
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return old?.filter((event) => event.id !== id) ?? [];
+    });
+  }, [queryClient]);
 
   const archiveEvent = useCallback((id: string) => {
-    setEvents((prev) =>
-      prev.map((event) => (event.id === id ? { ...event, status: "archived" as const } : event))
-    );
-  }, []);
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return old?.map((event) => (event.id === id ? { ...event, status: "archived" as const } : event)) ?? [];
+    });
+  }, [queryClient]);
 
   const unarchiveEvent = useCallback((id: string, newStatus: SportEvent["status"]) => {
-    setEvents((prev) =>
-      prev.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
-    );
-  }, []);
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return old?.map((event) => (event.id === id ? { ...event, status: newStatus } : event)) ?? [];
+    });
+  }, [queryClient]);
 
   const duplicateEvent = useCallback((newEvent: SportEvent) => {
-    setEvents((prev) => [...prev, newEvent]);
-  }, []);
+    queryClient.setQueryData(EVENTS_QUERY_KEY, (old: SportEvent[] | undefined) => {
+      return [...(old ?? []), newEvent];
+    });
+  }, [queryClient]);
 
   const getEventById = useCallback(
     (id: string) => events.find((event) => event.id === id),
@@ -96,7 +136,18 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <EventContext.Provider
-      value={{ events, isLoading, addEvent, updateEvent, deleteEvent, archiveEvent, unarchiveEvent, duplicateEvent, getEventById, refreshEvents }}
+      value={{
+        events,
+        isLoading,
+        addEvent,
+        updateEvent,
+        deleteEvent,
+        archiveEvent,
+        unarchiveEvent,
+        duplicateEvent,
+        getEventById,
+        refreshEvents,
+      }}
     >
       {children}
     </EventContext.Provider>
@@ -109,4 +160,19 @@ export function useEvents() {
     throw new Error("useEvents must be used within EventProvider");
   }
   return context;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITY: INVALIDATE EVENTS QUERY
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Hook to invalidate events query (for use after mutations)
+ */
+export function useInvalidateEvents() {
+  const queryClient = useQueryClient();
+
+  return useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: EVENTS_QUERY_KEY });
+  }, [queryClient]);
 }
