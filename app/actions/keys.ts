@@ -327,7 +327,7 @@ export async function generateKeys(data: GenerateKeysData): Promise<GenerateKeys
     }
 
     // Bulk create keys
-    const createdKeys = await prisma.accessKey.createMany({
+    await prisma.accessKey.createMany({
       data: keysToCreate,
     });
 

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { KeyRound } from "lucide-react";
-import type { KeyStatus, SportKey } from "../constants";
+import type { SportKey } from "../constants";
 import { STATUS_CFG, SPORT_COLOR, SPORT_TEXT } from "../constants";
 import { avatarInitials } from "../utils";
 import { CopyButton } from "./CopyButton";

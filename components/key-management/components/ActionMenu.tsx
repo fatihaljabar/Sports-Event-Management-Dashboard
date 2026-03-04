@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { MoreVertical, Mail, RotateCcw, ShieldOff, Trash2 } from "lucide-react";
-import type { KeyStatus, SportKey } from "../constants";
+import type { SportKey } from "../constants";
 
 interface ActionMenuProps {
   keyItem: SportKey;
