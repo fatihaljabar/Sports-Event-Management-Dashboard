@@ -163,7 +163,13 @@ export function KeyRow({
                 whiteSpace: "nowrap",
               }}
             >
-              {status.label}
+              {keyItem.status === "available"
+                ? eventStatus === "completed"
+                  ? "Event ended"
+                  : eventStatus === "archived"
+                    ? "Event archived"
+                    : status.label
+                : status.label}
             </span>
           </div>
           {keyItem.status === "available" && (
@@ -177,9 +183,9 @@ export function KeyRow({
               }}
             >
               {eventStatus === "completed"
-                ? "Event ended - key no longer usable"
+                ? "Key no longer usable"
                 : eventStatus === "archived"
-                  ? "Event archived - key unusable until unarchived"
+                  ? "Key unusable until unarchived"
                   : "Waiting for registration"}
             </p>
           )}
