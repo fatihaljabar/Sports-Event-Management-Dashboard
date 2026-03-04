@@ -542,7 +542,6 @@ function KeyUsageDisplay({ usedKeys, totalKeys }: KeyUsageDisplayProps) {
     );
   }
 
-  // Keys generated - show progress
   const pct = Math.round((usedKeys / totalKeys) * 100);
   const barColor = pct >= 90 ? "#EF4444" : pct >= 75 ? "#F59E0B" : "#2563EB";
   const barBg = pct >= 90 ? "#FEE2E2" : pct >= 75 ? "#FEF3C7" : "#DBEAFE";
