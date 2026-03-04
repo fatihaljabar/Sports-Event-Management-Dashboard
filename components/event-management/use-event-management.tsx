@@ -214,9 +214,21 @@ export function useEventManagement() {
           comparison =
             a.startDateActual.getTime() - b.startDateActual.getTime();
           break;
-        case "keys":
-          comparison = a.usedKeys / a.totalKeys - b.usedKeys / b.totalKeys;
+        case "keys": {
+          // Helper function to get usage percentage
+          // Returns -1 for "Not Generated" (totalKeys = 0)
+          const getUsagePercentage = (event: SportEvent): number => {
+            if (event.totalKeys === 0) return -1; // Not Generated
+            return event.usedKeys / event.totalKeys;
+          };
+
+          const aPercent = getUsagePercentage(a);
+          const bPercent = getUsagePercentage(b);
+
+          // Not Generated (-1) always sorts first in ascending, last in descending
+          comparison = aPercent - bPercent;
           break;
+        }
         case "location":
           comparison = a.location.localeCompare(b.location);
           break;
