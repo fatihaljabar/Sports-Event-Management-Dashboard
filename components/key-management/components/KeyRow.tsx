@@ -2,7 +2,7 @@
 
 import React from "react";
 import { KeyRound } from "lucide-react";
-import type { KeyStatus, SportKey } from "../constants";
+import type { SportKey } from "../constants";
 import { STATUS_CFG, SPORT_COLOR, SPORT_TEXT } from "../constants";
 import { avatarInitials } from "../utils";
 import { CopyButton } from "./CopyButton";
@@ -17,6 +17,8 @@ interface KeyRowProps {
   onRevoke: (id: string) => void;
   onRestore: (id: string) => void;
   onDelete: (id: string) => void;
+  isReadOnly?: boolean;
+  eventStatus?: "active" | "upcoming" | "completed" | "archived" | "inactive" | "ongoing";
 }
 
 export function KeyRow({
@@ -28,6 +30,8 @@ export function KeyRow({
   onRevoke,
   onRestore,
   onDelete,
+  isReadOnly = false,
+  eventStatus = "active",
 }: KeyRowProps) {
   const isZebra = idx % 2 !== 0;
   const status = STATUS_CFG[keyItem.status];
@@ -159,20 +163,30 @@ export function KeyRow({
                 whiteSpace: "nowrap",
               }}
             >
-              {status.label}
+              {keyItem.status === "available"
+                ? eventStatus === "completed"
+                  ? "Event ended"
+                  : eventStatus === "archived"
+                    ? "Event archived"
+                    : status.label
+                : status.label}
             </span>
           </div>
           {keyItem.status === "available" && (
             <p
               style={{
-                color: "#CBD5E1",
+                color: eventStatus === "completed" ? "#059669" : eventStatus === "archived" ? "#D97706" : "#CBD5E1",
                 fontSize: "0.65rem",
                 fontFamily: '"Inter", sans-serif',
                 marginTop: "4px",
                 paddingLeft: "2px",
               }}
             >
-              Waiting for registration
+              {eventStatus === "completed"
+                ? "Key no longer usable"
+                : eventStatus === "archived"
+                  ? "Key unusable until unarchived"
+                  : "Waiting for registration"}
             </p>
           )}
           {keyItem.status === "revoked" && (
@@ -260,7 +274,13 @@ export function KeyRow({
 
       {/* Actions */}
       <td style={{ padding: "14px 20px", textAlign: "center" }}>
-        <ActionMenu keyItem={keyItem} onRevoke={onRevoke} onRestore={onRestore} onDelete={onDelete} />
+        <ActionMenu
+          keyItem={keyItem}
+          onRevoke={onRevoke}
+          onRestore={onRestore}
+          onDelete={onDelete}
+          isReadOnly={isReadOnly}
+        />
       </td>
     </tr>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Hash, RefreshCw, Zap, Check, AlertCircle } from "lucide-react";
+import { X, Hash, RefreshCw, Zap, Check, AlertCircle, Archive } from "lucide-react";
 import { generateKeys } from "@/app/actions/keys";
 import { toast } from "sonner";
 import type { SportCategory } from "@/lib/types/event";
@@ -60,6 +60,18 @@ export function GenerateKeysModal({
       if (result.success) {
         setDone(true);
         onKeysGenerated();
+        // Show warning if event is archived
+        if (result.warning) {
+          toast("Keys generated with warning", {
+            description: result.warning,
+            className: "archive-toast",
+            icon: <Archive className="w-5 h-5" style={{ color: "#D97706" }} />,
+          });
+        } else {
+          toast.success("Keys generated successfully", {
+            description: `${qty} access keys have been created.`,
+          });
+        }
         setTimeout(() => onClose(), 1200);
       } else {
         toast.error("Failed to generate keys", {
