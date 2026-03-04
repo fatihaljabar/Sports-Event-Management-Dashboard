@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Hash, RefreshCw, Zap, Check, AlertCircle } from "lucide-react";
+import { X, Hash, RefreshCw, Zap, Check, AlertCircle, Archive } from "lucide-react";
 import { generateKeys } from "@/app/actions/keys";
 import { toast } from "sonner";
 import type { SportCategory } from "@/lib/types/event";
@@ -65,6 +65,7 @@ export function GenerateKeysModal({
           toast("Keys generated with warning", {
             description: result.warning,
             className: "archive-toast",
+            icon: <Archive className="w-5 h-5" style={{ color: "#D97706" }} />,
           });
         } else {
           toast.success("Keys generated successfully", {

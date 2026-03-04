@@ -90,6 +90,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
           onRestore={handleRestore}
           onDelete={handleDelete}
           isReadOnly={isReadOnly}
+          eventStatus={eventStatus}
         />
 
         <div style={{ height: "32px" }} />

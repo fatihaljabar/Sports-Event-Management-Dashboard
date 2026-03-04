@@ -18,6 +18,7 @@ interface KeyRowProps {
   onRestore: (id: string) => void;
   onDelete: (id: string) => void;
   isReadOnly?: boolean;
+  eventStatus?: "active" | "upcoming" | "completed" | "archived" | "inactive" | "ongoing";
 }
 
 export function KeyRow({
@@ -30,6 +31,7 @@ export function KeyRow({
   onRestore,
   onDelete,
   isReadOnly = false,
+  eventStatus = "active",
 }: KeyRowProps) {
   const isZebra = idx % 2 !== 0;
   const status = STATUS_CFG[keyItem.status];
@@ -167,14 +169,18 @@ export function KeyRow({
           {keyItem.status === "available" && (
             <p
               style={{
-                color: "#CBD5E1",
+                color: eventStatus === "completed" ? "#059669" : eventStatus === "archived" ? "#D97706" : "#CBD5E1",
                 fontSize: "0.65rem",
                 fontFamily: '"Inter", sans-serif',
                 marginTop: "4px",
                 paddingLeft: "2px",
               }}
             >
-              Waiting for registration
+              {eventStatus === "completed"
+                ? "Event ended - key no longer usable"
+                : eventStatus === "archived"
+                  ? "Event archived - key unusable until unarchived"
+                  : "Waiting for registration"}
             </p>
           )}
           {keyItem.status === "revoked" && (

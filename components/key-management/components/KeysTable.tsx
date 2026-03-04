@@ -32,6 +32,7 @@ interface KeysTableProps {
   onRestore: (id: string) => void;
   onDelete: (id: string) => void;
   isReadOnly?: boolean;
+  eventStatus?: "active" | "upcoming" | "completed" | "archived" | "inactive" | "ongoing";
 }
 
 export function KeysTable({
@@ -47,6 +48,7 @@ export function KeysTable({
   onRestore,
   onDelete,
   isReadOnly = false,
+  eventStatus = "active",
 }: KeysTableProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
@@ -220,6 +222,7 @@ export function KeysTable({
                   onRestore={onRestore}
                   onDelete={onDelete}
                   isReadOnly={isReadOnly}
+                  eventStatus={eventStatus}
                 />
               ))
             )}
