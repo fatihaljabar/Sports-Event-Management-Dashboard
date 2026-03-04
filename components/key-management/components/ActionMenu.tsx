@@ -10,6 +10,7 @@ interface ActionMenuProps {
   onRevoke: (id: string) => void;
   onRestore: (id: string) => void;
   onDelete: (id: string) => void;
+  isReadOnly?: boolean;
 }
 
 interface MenuItem {
@@ -19,7 +20,7 @@ interface MenuItem {
   action?: () => void;
 }
 
-export function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: ActionMenuProps) {
+export function ActionMenu({ keyItem, onRevoke, onRestore, onDelete, isReadOnly = false }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -43,14 +44,21 @@ export function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: ActionMen
     ...(keyItem.status === "confirmed"
       ? [{ icon: <Mail className="w-3.5 h-3.5" />, label: "Resend Email", color: "#374151" }]
       : []),
-    ...(keyItem.status === "revoked"
+    ...(keyItem.status === "revoked" && !isReadOnly
       ? [{ icon: <RotateCcw className="w-3.5 h-3.5" />, label: "Restore Key", color: "#059669", action: () => onRestore(keyItem.id) }]
       : []),
-    ...(keyItem.status !== "revoked"
+    ...(keyItem.status !== "revoked" && !isReadOnly
       ? [{ icon: <ShieldOff className="w-3.5 h-3.5" />, label: "Revoke Key", color: "#EF4444", action: () => onRevoke(keyItem.id) }]
       : []),
-    { icon: <Trash2 className="w-3.5 h-3.5" />, label: "Delete Key", color: "#EF4444", action: () => onDelete(keyItem.id) },
+    ...(!isReadOnly
+      ? [{ icon: <Trash2 className="w-3.5 h-3.5" />, label: "Delete Key", color: "#EF4444", action: () => onDelete(keyItem.id) }]
+      : []),
   ];
+
+  // Show "View Only" message when in readonly mode
+  if (isReadOnly && items.length === 0) {
+    items.push({ icon: <ShieldOff className="w-3.5 h-3.5" />, label: "View Only Mode", color: "#9CA3AF" });
+  }
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -70,18 +78,23 @@ export function ActionMenu({ keyItem, onRevoke, onRestore, onDelete }: ActionMen
     <div className="relative">
       <button
         ref={buttonRef}
-        onClick={handleToggle}
+        onClick={isReadOnly ? undefined : handleToggle}
+        disabled={isReadOnly}
         className="flex items-center justify-center rounded-lg transition-all"
         style={{
           width: "28px",
           height: "28px",
-          color: "#94A3B8",
+          color: isReadOnly ? "#D1D5DB" : "#94A3B8",
           border: "1.5px solid transparent",
           backgroundColor: open ? "#F1F5F9" : "transparent",
+          cursor: isReadOnly ? "not-allowed" : "pointer",
+          opacity: isReadOnly ? 0.5 : 1,
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F1F5F9";
-          (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
+          if (!isReadOnly) {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F1F5F9";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
+          }
         }}
         onMouseLeave={(e) => {
           if (!open) {

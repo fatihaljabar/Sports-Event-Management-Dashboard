@@ -35,6 +35,7 @@ export interface GenerateKeysResult {
   success: boolean;
   keys?: AccessKey[];
   error?: string;
+  warning?: string;
 }
 
 export interface GetKeysResult {
@@ -281,6 +282,32 @@ export async function generateKeys(data: GenerateKeysData): Promise<GenerateKeys
       return { success: false, error: "Event not found." };
     }
 
+    // Check event status - block key generation for completed events
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(event.startDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(event.endDate);
+    endDate.setHours(0, 0, 0, 0);
+
+    // Determine if event is completed
+    const isCompleted = today > endDate;
+    // Check if event is archived (from database status)
+    const isArchived = event.status === "archived";
+
+    // Block key generation for completed events
+    if (isCompleted) {
+      return {
+        success: false,
+        error: "Cannot generate keys for completed events. This event has already ended.",
+      };
+    }
+
+    // Warning for archived events - keys can be generated but won't be usable
+    const archivedWarning = isArchived
+      ? "Note: This event is archived. Generated keys will not be usable by participants until the event is unarchived."
+      : undefined;
+
     // Get event prefix from name (first 2 chars, uppercase)
     const eventPrefix = event.name.slice(0, 2).toUpperCase();
 
@@ -340,7 +367,11 @@ export async function generateKeys(data: GenerateKeysData): Promise<GenerateKeys
       createdAt: key.createdAt,
     }));
 
-    return { success: true, keys: transformedKeys };
+    return {
+      success: true,
+      keys: transformedKeys,
+      ...(archivedWarning && { warning: archivedWarning }),
+    };
   } catch (error) {
     devLog.error("Error generating keys:", error);
     return {
@@ -533,6 +564,100 @@ export async function deleteKey(keyId: string): Promise<DeleteKeyResult> {
     return {
       success: false,
       error: GENERIC_ERROR_MESSAGES.DELETE_FAILED,
+    };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KEY ACCESS VALIDATION
+// ═══════════════════════════════════════════════════════════════
+
+export interface ValidateKeyAccessResult {
+  success: boolean;
+  valid?: boolean;
+  error?: string;
+  reason?: "completed" | "archived" | "revoked" | "not_found";
+}
+
+/**
+ * Validate if a key can be used for access
+ * Checks:
+ * 1. Key exists and is not revoked
+ * 2. Event is not completed (ended)
+ * 3. Event is not archived
+ *
+ * Use this function when users attempt to use/access a key
+ */
+export async function validateKeyAccess(keyCode: string): Promise<ValidateKeyAccessResult> {
+  try {
+    if (!keyCode) {
+      return { success: false, error: "Invalid key code." };
+    }
+
+    // Find the key by code
+    const key = await prisma.accessKey.findFirst({
+      where: { code: keyCode },
+    });
+
+    if (!key) {
+      return { success: true, valid: false, reason: "not_found", error: "Invalid access key." };
+    }
+
+    // Check if key is revoked
+    if (key.status === "REVOKED") {
+      return {
+        success: true,
+        valid: false,
+        reason: "revoked",
+        error: "This access key has been revoked and is no longer valid.",
+      };
+    }
+
+    // Get the associated event
+    const event = await prisma.sportEvent.findUnique({
+      where: { eventId: key.eventId },
+    });
+
+    if (!event) {
+      return { success: false, error: "Associated event not found." };
+    }
+
+    // Check event status
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(event.startDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(event.endDate);
+    endDate.setHours(0, 0, 0, 0);
+
+    // Check if event is completed (ended)
+    const isCompleted = today > endDate;
+    if (isCompleted) {
+      return {
+        success: true,
+        valid: false,
+        reason: "completed",
+        error: "This event has ended. The access key is no longer valid.",
+      };
+    }
+
+    // Check if event is archived
+    if (event.status === "archived") {
+      return {
+        success: true,
+        valid: false,
+        reason: "archived",
+        error: "This event is currently archived. Access keys cannot be used at this time.",
+      };
+    }
+
+    // Key is valid
+    return { success: true, valid: true };
+  } catch (error) {
+    devLog.error("Error validating key access:", error);
+    return {
+      success: false,
+      error: "Failed to validate key. Please try again.",
     };
   }
 }

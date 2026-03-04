@@ -57,6 +57,9 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
     ? getCalculatedStatus(event)
     : "upcoming";
 
+  // Check if event is in read-only mode (completed events)
+  const isReadOnly = eventStatus === "completed";
+
   return (
     <main className="flex-1 overflow-y-auto" style={{ backgroundColor: "#F8FAFC" }}>
       <div className="px-6 py-6" style={{ maxWidth: "1600px" }}>
@@ -70,6 +73,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
           confirmed={confirmed}
           onBack={onBack}
           onGenerateKeys={() => setShowGenerateModal(true)}
+          isReadOnly={isReadOnly}
         />
 
         {/* Table with pagination */}
@@ -85,6 +89,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
           onRevoke={handleRevoke}
           onRestore={handleRestore}
           onDelete={handleDelete}
+          isReadOnly={isReadOnly}
         />
 
         <div style={{ height: "32px" }} />

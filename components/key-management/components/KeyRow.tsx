@@ -17,6 +17,7 @@ interface KeyRowProps {
   onRevoke: (id: string) => void;
   onRestore: (id: string) => void;
   onDelete: (id: string) => void;
+  isReadOnly?: boolean;
 }
 
 export function KeyRow({
@@ -28,6 +29,7 @@ export function KeyRow({
   onRevoke,
   onRestore,
   onDelete,
+  isReadOnly = false,
 }: KeyRowProps) {
   const isZebra = idx % 2 !== 0;
   const status = STATUS_CFG[keyItem.status];
@@ -260,7 +262,13 @@ export function KeyRow({
 
       {/* Actions */}
       <td style={{ padding: "14px 20px", textAlign: "center" }}>
-        <ActionMenu keyItem={keyItem} onRevoke={onRevoke} onRestore={onRestore} onDelete={onDelete} />
+        <ActionMenu
+          keyItem={keyItem}
+          onRevoke={onRevoke}
+          onRestore={onRestore}
+          onDelete={onDelete}
+          isReadOnly={isReadOnly}
+        />
       </td>
     </tr>
   );

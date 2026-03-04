@@ -31,6 +31,7 @@ interface KeysTableProps {
   onRevoke: (id: string) => void;
   onRestore: (id: string) => void;
   onDelete: (id: string) => void;
+  isReadOnly?: boolean;
 }
 
 export function KeysTable({
@@ -45,6 +46,7 @@ export function KeysTable({
   onRevoke,
   onRestore,
   onDelete,
+  isReadOnly = false,
 }: KeysTableProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
@@ -217,6 +219,7 @@ export function KeysTable({
                   onRevoke={onRevoke}
                   onRestore={onRestore}
                   onDelete={onDelete}
+                  isReadOnly={isReadOnly}
                 />
               ))
             )}

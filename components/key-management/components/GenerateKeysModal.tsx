@@ -60,6 +60,16 @@ export function GenerateKeysModal({
       if (result.success) {
         setDone(true);
         onKeysGenerated();
+        // Show warning if event is archived
+        if (result.warning) {
+          toast.warning("Keys generated with warning", {
+            description: result.warning,
+          });
+        } else {
+          toast.success("Keys generated successfully", {
+            description: `${qty} access keys have been created.`,
+          });
+        }
         setTimeout(() => onClose(), 1200);
       } else {
         toast.error("Failed to generate keys", {

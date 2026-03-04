@@ -13,6 +13,8 @@ import {
   Users,
   KeyRound,
   UserCheck,
+  AlertCircle,
+  Archive,
 } from "lucide-react";
 import type { EventStatusType } from "../constants";
 import { EVENT_STATUS_CFG } from "../constants";
@@ -28,6 +30,7 @@ interface KeyManagementHeaderProps {
   confirmed: number;
   onBack: () => void;
   onGenerateKeys: () => void;
+  isReadOnly?: boolean;
 }
 
 export function KeyManagementHeader({
@@ -38,6 +41,7 @@ export function KeyManagementHeader({
   confirmed,
   onBack,
   onGenerateKeys,
+  isReadOnly = false,
 }: KeyManagementHeaderProps) {
   const eventDisplayName = event?.name ?? "Unknown Event";
   const eventDisplayLocation = event?.location?.city ?? "Unknown Location";
@@ -100,6 +104,37 @@ export function KeyManagementHeader({
             <span style={{ color: "#2563EB", fontWeight: 500 }}>Participants & Keys</span>
           </div>
         </div>
+
+        {/* Status Alert Banner */}
+        {(eventStatus === "completed" || eventStatus === "archived") && (
+          <div
+            className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
+            style={{
+              backgroundColor: eventStatus === "completed" ? "#FEF2F2" : "#F3F4F6",
+              border: `1px solid ${eventStatus === "completed" ? "#FECACA" : "#E5E7EB"}`,
+            }}
+          >
+            {eventStatus === "completed" ? (
+              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#DC2626" }} strokeWidth={1.75} />
+            ) : (
+              <Archive className="w-5 h-5 flex-shrink-0" style={{ color: "#6B7280" }} strokeWidth={1.75} />
+            )}
+            <div className="flex-1">
+              <p
+                style={{
+                  color: eventStatus === "completed" ? "#991B1B" : "#374151",
+                  fontSize: "0.8rem",
+                  fontFamily: '"Inter", sans-serif',
+                  fontWeight: 500,
+                }}
+              >
+                {eventStatus === "completed"
+                  ? "This event has ended - key management is view-only"
+                  : "This event is archived - keys cannot be used by participants until unarchived"}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Title row */}
         <div className="flex items-end justify-between">
@@ -232,27 +267,66 @@ export function KeyManagementHeader({
 
             <button
               onClick={onGenerateKeys}
+              disabled={isReadOnly}
               className="flex items-center gap-2 rounded-xl px-5 py-2.5 transition-all active:scale-95"
               style={{
-                background: "linear-gradient(135deg,#2563EB,#1D4ED8)",
-                color: "#FFFFFF",
+                background: isReadOnly
+                  ? "#E5E7EB"
+                  : eventStatus === "archived"
+                    ? "linear-gradient(135deg,#F59E0B,#D97706)"
+                    : "linear-gradient(135deg,#2563EB,#1D4ED8)",
+                color: isReadOnly ? "#9CA3AF" : "#FFFFFF",
                 fontSize: "0.84rem",
                 fontFamily: '"Inter", sans-serif',
                 fontWeight: 600,
-                boxShadow: "0 4px 16px rgba(37,99,235,0.32)",
-                border: "none",
+                boxShadow: isReadOnly
+                  ? "none"
+                  : eventStatus === "archived"
+                    ? "0 4px 16px rgba(245,158,11,0.32)"
+                    : "0 4px 16px rgba(37,99,235,0.32)",
+                border: isReadOnly ? "1px solid #D1D5DB" : "none",
+                cursor: isReadOnly ? "not-allowed" : "pointer",
+                opacity: isReadOnly ? 0.7 : 1,
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg,#1D4ED8,#1E40AF)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 20px rgba(37,99,235,0.45)";
+                if (!isReadOnly) {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    eventStatus === "archived"
+                      ? "linear-gradient(135deg,#D97706,#B45309)"
+                      : "linear-gradient(135deg,#1D4ED8,#1E40AF)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    eventStatus === "archived"
+                      ? "0 6px 20px rgba(245,158,11,0.45)"
+                      : "0 6px 20px rgba(37,99,235,0.45)";
+                }
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg,#2563EB,#1D4ED8)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px rgba(37,99,235,0.32)";
+                if (!isReadOnly) {
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    eventStatus === "archived"
+                      ? "linear-gradient(135deg,#F59E0B,#D97706)"
+                      : "linear-gradient(135deg,#2563EB,#1D4ED8)";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    eventStatus === "archived"
+                      ? "0 4px 16px rgba(245,158,11,0.32)"
+                      : "0 4px 16px rgba(37,99,235,0.32)";
+                }
               }}
             >
               <Plus className="w-4 h-4" strokeWidth={2.5} />
               Generate Keys
+              {eventStatus === "archived" && !isReadOnly && (
+                <span
+                  style={{
+                    fontSize: "0.65rem",
+                    fontWeight: 400,
+                    opacity: 0.9,
+                    marginLeft: "2px",
+                  }}
+                >
+                  (Archived)
+                </span>
+              )}
             </button>
           </div>
         </div>
