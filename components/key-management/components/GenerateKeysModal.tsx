@@ -62,8 +62,9 @@ export function GenerateKeysModal({
         onKeysGenerated();
         // Show warning if event is archived
         if (result.warning) {
-          toast.warning("Keys generated with warning", {
+          toast("Keys generated with warning", {
             description: result.warning,
+            className: "archive-toast",
           });
         } else {
           toast.success("Keys generated successfully", {

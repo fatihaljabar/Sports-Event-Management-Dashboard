@@ -110,19 +110,19 @@ export function KeyManagementHeader({
           <div
             className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
             style={{
-              backgroundColor: eventStatus === "completed" ? "#FEF2F2" : "#F3F4F6",
-              border: `1px solid ${eventStatus === "completed" ? "#FECACA" : "#E5E7EB"}`,
+              backgroundColor: eventStatus === "completed" ? "#ECFDF5" : "#FFFBEB",
+              border: `1px solid ${eventStatus === "completed" ? "#A7F3D0" : "#FDE68A"}`,
             }}
           >
             {eventStatus === "completed" ? (
-              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#DC2626" }} strokeWidth={1.75} />
+              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#059669" }} strokeWidth={1.75} />
             ) : (
-              <Archive className="w-5 h-5 flex-shrink-0" style={{ color: "#6B7280" }} strokeWidth={1.75} />
+              <Archive className="w-5 h-5 flex-shrink-0" style={{ color: "#D97706" }} strokeWidth={1.75} />
             )}
             <div className="flex-1">
               <p
                 style={{
-                  color: eventStatus === "completed" ? "#991B1B" : "#374151",
+                  color: eventStatus === "completed" ? "#065F46" : "#92400E",
                   fontSize: "0.8rem",
                   fontFamily: '"Inter", sans-serif',
                   fontWeight: 500,
