@@ -454,22 +454,24 @@ interface KeyUsageDisplayProps {
 }
 
 function KeyUsageDisplay({ usedKeys, totalKeys }: KeyUsageDisplayProps) {
-  // Handle "Not Generated" case (totalKeys = 0)
+  // Keys not generated yet
   if (totalKeys === 0) {
     return (
-      <div>
-        <div className="flex items-center gap-1.5">
-          <KeyRound className="w-3 h-3" strokeWidth={1.75} style={{ color: "#CBD5E1" }} />
-          <span
-            style={{
-              color: "#94A3B8",
-              fontSize: "0.75rem",
-              fontWeight: 500,
-            }}
-          >
-            Not Generated
-          </span>
-        </div>
+      <div className="flex items-center gap-1.5">
+        <KeyRound
+          className="w-3.5 h-3.5 flex-shrink-0"
+          strokeWidth={1.5}
+          style={{ color: "#94A3B8" }}
+        />
+        <span
+          style={{
+            color: "#94A3B8",
+            fontSize: "0.72rem",
+            fontWeight: 500,
+          }}
+        >
+          Not generated
+        </span>
       </div>
     );
   }
