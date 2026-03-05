@@ -9,13 +9,14 @@ import { SectionDivider } from "@/components/ui/SectionDivider";
 import { DropZone } from "@/components/ui/DropZone";
 import { SportMultiSelect } from "@/components/ui/SportMultiSelect";
 import { EventTypeSelector } from "@/components/ui/EventTypeSelector";
+import { StatusSelector } from "@/components/ui/StatusSelector";
 import { SponsorLogosUploader } from "@/components/ui/SponsorLogosUploader";
 import { EventFormActions } from "@/components/ui/EventFormActions";
 import { LocationPicker } from "@/components/ui/location-picker/LocationPicker";
 import { TimezoneAlert } from "@/components/ui/TimezoneAlert";
 import { updateEvent } from "@/app/actions/events";
 import { toast } from "sonner";
-import type { SportEvent as ApiSportEvent, SportCategory } from "@/lib/types/event";
+import type { SportEvent as ApiSportEvent, SportCategory, EventStatus } from "@/lib/types/event";
 
 interface EditEventModalProps {
   event: ApiSportEvent;
@@ -50,6 +51,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
   // Form state
   const [eventName, setEventName] = useState(event.name);
   const [eventType, setEventType] = useState<"single" | "multi">(event.type);
+  const [status, setStatus] = useState<EventStatus>(event.status);
   const [selectedSports, setSelectedSports] = useState<SportCategory[]>([]);
   // Initialize location with the event's location string to avoid empty state on first render
   const initialLocationString = event.location.venue
@@ -208,6 +210,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
         eventId: event.id,
         name: eventName,
         type: eventType,
+        status,
         sports: selectedSports,
         locationCity: locationCity,
         locationTimezone: timezone,
@@ -365,6 +368,12 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
               <div>
                 <FieldLabel required>Event Type</FieldLabel>
                 <EventTypeSelector value={eventType} onChange={handleEventTypeChange} />
+              </div>
+
+              {/* Event Status */}
+              <div>
+                <FieldLabel required>Event Status</FieldLabel>
+                <StatusSelector value={status} onChange={setStatus} />
               </div>
 
               {/* Sport Categories */}
