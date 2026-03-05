@@ -188,6 +188,7 @@ function validateBase64Size(base64: string, maxSize: number): boolean {
 export interface CreateEventData {
   name: string;
   type: "single" | "multi";
+  status: "upcoming" | "active" | "ongoing" | "completed" | "archived" | "inactive";
   sports: SportCategory[];
   locationCity: string;
   locationTimezone: string;
@@ -571,7 +572,7 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
         eventId,
         name: sanitizedName,
         type: data.type,
-        status: "upcoming",
+        status: data.status, // Use the status from input data
         locationCity: sanitizedLocationCity,
         locationVenue: null,
         locationTimezone: sanitizedTimezone,
@@ -815,6 +816,7 @@ export interface UpdateEventData {
   eventId: string;
   name: string;
   type: "single" | "multi";
+  status: "upcoming" | "active" | "ongoing" | "completed" | "archived" | "inactive";
   sports: SportCategory[];
   locationCity: string;
   locationTimezone: string;
@@ -978,6 +980,7 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
       data: {
         name: sanitizedName,
         type: data.type,
+        status: data.status, // Use the status from input data
         locationCity: sanitizedLocationCity,
         locationTimezone: sanitizedTimezone,
         startDate: new Date(data.startDate),
