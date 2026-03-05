@@ -188,7 +188,6 @@ function validateBase64Size(base64: string, maxSize: number): boolean {
 export interface CreateEventData {
   name: string;
   type: "single" | "multi";
-  status: "upcoming" | "active" | "completed" | "archived";
   sports: SportCategory[];
   locationCity: string;
   locationTimezone: string;
@@ -226,6 +225,27 @@ async function getNextEventId(): Promise<string> {
   const nextNum = lastNum + 1;
 
   return `EVT-${String(nextNum).padStart(3, "0")}`;
+}
+
+/**
+ * Calculate event status based on dates
+ * - upcoming: current date < start date
+ * - active: current date >= start date AND current date <= end date
+ * - completed: current date > end date
+ * Note: archived status is managed separately via archiveEvent/unarchiveEvent
+ */
+function calculateEventStatus(startDate: Date, endDate: Date): "upcoming" | "active" | "completed" {
+  const now = new Date();
+  // Reset time to midnight for consistent date comparison
+  now.setHours(0, 0, 0, 0);
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  if (now < start) return "upcoming";
+  if (now > end) return "completed";
+  return "active";
 }
 
 /**
@@ -567,12 +587,13 @@ export async function createEvent(data: CreateEventData): Promise<CreateEventRes
     }
 
     // Create event in database
+    // Status is auto-calculated based on dates (new events start as upcoming)
     const event = await prisma.sportEvent.create({
       data: {
         eventId,
         name: sanitizedName,
         type: data.type,
-        status: data.status, // Use the status from input data
+        status: calculateEventStatus(new Date(data.startDate), new Date(data.endDate)),
         locationCity: sanitizedLocationCity,
         locationVenue: null,
         locationTimezone: sanitizedTimezone,
@@ -816,7 +837,6 @@ export interface UpdateEventData {
   eventId: string;
   name: string;
   type: "single" | "multi";
-  status: "upcoming" | "active" | "completed" | "archived";
   sports: SportCategory[];
   locationCity: string;
   locationTimezone: string;
@@ -975,12 +995,17 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
     }
 
     // Update event in database
+    // Status is auto-calculated based on dates, but preserve "archived" if already archived
+    const newStatus = existingEvent.status === "archived"
+      ? "archived"
+      : calculateEventStatus(new Date(data.startDate), new Date(data.endDate));
+
     const event = await prisma.sportEvent.update({
       where: { eventId: data.eventId },
       data: {
         name: sanitizedName,
         type: data.type,
-        status: data.status, // Use the status from input data
+        status: newStatus,
         locationCity: sanitizedLocationCity,
         locationTimezone: sanitizedTimezone,
         startDate: new Date(data.startDate),

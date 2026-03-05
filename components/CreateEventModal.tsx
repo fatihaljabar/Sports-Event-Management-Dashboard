@@ -8,7 +8,6 @@ import { SectionDivider } from "@/components/ui/SectionDivider";
 import { DropZone } from "@/components/ui/DropZone";
 import { SportMultiSelect } from "@/components/ui/SportMultiSelect";
 import { EventTypeSelector } from "@/components/ui/EventTypeSelector";
-import { StatusSelector } from "@/components/ui/StatusSelector";
 import { SponsorLogosUploader } from "@/components/ui/SponsorLogosUploader";
 import { EventFormActions } from "@/components/ui/EventFormActions";
 import { TimezoneAlert } from "@/components/ui/TimezoneAlert";
@@ -24,8 +23,6 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
     eventName,
     setEventName,
     eventType,
-    status,
-    setStatus,
     selectedSports,
     location,
     timezone,
@@ -182,12 +179,6 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
               <div>
                 <FieldLabel required>Event Type</FieldLabel>
                 <EventTypeSelector value={eventType} onChange={handleEventTypeChange} />
-              </div>
-
-              {/* Event Status */}
-              <div>
-                <FieldLabel required>Event Status</FieldLabel>
-                <StatusSelector value={status} onChange={setStatus} />
               </div>
 
               {/* Sport Categories */}

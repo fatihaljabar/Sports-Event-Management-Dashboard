@@ -5,7 +5,6 @@ import { getTimezoneByLocation, getSportsByIds } from "@/lib/utils/create-event-
 import { validateCreateEventData, clearError } from "@/lib/utils/create-event-validation";
 import { createEvent } from "@/app/actions/events";
 import type { UploadedFile } from "@/components/ui/SponsorLogosUploader";
-import type { EventStatus } from "@/lib/types/event";
 
 export type EventType = "single" | "multi";
 
@@ -19,7 +18,6 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
   // Form state
   const [eventName, setEventName] = useState("");
   const [eventType, setEventType] = useState<EventType>("single");
-  const [status, setStatus] = useState<EventStatus>("upcoming");
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [location, setLocation] = useState("");
   const [timezone, setTimezone] = useState("");
@@ -159,7 +157,6 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
       const result = await createEvent({
         name: eventName,
         type: eventType,
-        status,
         sports: getSportsByIds(selectedSports),
         locationCity: location,
         locationTimezone: timezone || "Asia/Bangkok (GMT+7)",
@@ -195,13 +192,12 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [eventName, eventType, status, selectedSports, location, timezone, startDate, endDate, visibility, eventLogo, sponsorLogos, addEvent, onClose, validateForm]);
+  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, visibility, eventLogo, sponsorLogos, addEvent, onClose, validateForm]);
 
   // Reset form
   const resetForm = useCallback(() => {
     setEventName("");
     setEventType("single");
-    setStatus("upcoming");
     setSelectedSports([]);
     setLocation("");
     setTimezone("");
@@ -219,8 +215,6 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     eventName,
     setEventName,
     eventType,
-    status,
-    setStatus,
     selectedSports,
     location,
     timezone,
