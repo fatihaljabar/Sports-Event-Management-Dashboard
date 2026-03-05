@@ -913,9 +913,32 @@ export async function updateEvent(data: UpdateEventData): Promise<UpdateEventRes
     // Upload new logo if provided
     let logoUrl: string | null = existingEvent.logoUrl;
     if (data.logoBase64 && data.logoFileName && !data.keepExistingLogo) {
-      devLog.log("Uploading new logo for event:", data.eventId);
+      // Delete old logo from storage first
+      if (existingEvent.logoUrl) {
+        try {
+          const url = new URL(existingEvent.logoUrl);
+          const pathParts = url.pathname.split("/");
+          const bucketIndex = pathParts.indexOf("event-logos");
+          if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
+            const storagePath = pathParts.slice(bucketIndex + 1).join("/");
+            const supabase = createServiceClient();
+            const { error: deleteError } = await supabase.storage
+              .from("event-logos")
+              .remove([storagePath]);
+            if (deleteError) {
+              devLog.error("[UPDATE] Error deleting old logo:", deleteError);
+            } else {
+              devLog.log("[UPDATE] Deleted old logo:", storagePath);
+            }
+          }
+        } catch (error) {
+          devLog.error("[UPDATE] Exception deleting old logo:", error);
+        }
+      }
+
+      devLog.log("[UPDATE] Uploading new logo for event:", data.eventId);
       logoUrl = await uploadEventLogo(data.logoBase64, data.logoFileName, data.eventId);
-      devLog.log("New logo uploaded, URL:", logoUrl);
+      devLog.log("[UPDATE] New logo uploaded, URL:", logoUrl);
     }
 
     // Handle sponsor logos
