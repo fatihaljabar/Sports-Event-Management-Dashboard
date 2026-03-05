@@ -6,14 +6,14 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import type { SportEvent, SportCategory, SponsorLogoData } from "@/lib/types/event";
 import { Prisma } from "@prisma/client";
-import { checkRateLimit, getClientIp, RATE_LIMIT_CONFIG, type RateLimitType } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp, type RateLimitType } from "@/lib/rate-limit";
 
 // ═══════════════════════════════════════════════════════════════
 // SECURITY CONSTANTS
 // ═══════════════════════════════════════════════════════════════
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_STRING_LENGTH = 500;
+const _MAX_STRING_LENGTH = 500;
 const MAX_EVENT_NAME_LENGTH = 200;
 const MAX_LOCATION_LENGTH = 200;
 const MAX_TIMEZONE_LENGTH = 100;
@@ -321,6 +321,73 @@ async function uploadEventLogo(
     return publicUrlData.publicUrl;
   } catch (error) {
     devLog.error("[UPLOAD] Exception in uploadEventLogo:", error);
+    return null;
+  }
+}
+
+/**
+ * Copy a file from one storage path to another within Supabase Storage
+ * Used for duplicating events - creates actual copies of logo files
+ */
+async function copyStorageFile(
+  sourcePath: string,
+  destinationPath: string
+): Promise<string | null> {
+  try {
+    const supabase = createServiceClient();
+
+    devLog.log("[COPY FILE] From:", sourcePath, "To:", destinationPath);
+
+    // Download the source file
+    const { data: sourceData, error: downloadError } = await supabase.storage
+      .from("event-logos")
+      .createSignedUrl(sourcePath, 60);
+
+    if (downloadError || !sourceData?.signedUrl) {
+      devLog.error("[COPY FILE] Error creating signed URL for source:", downloadError);
+      return null;
+    }
+
+    // Fetch the file data
+    const response = await fetch(sourceData.signedUrl);
+    if (!response.ok) {
+      devLog.error("[COPY FILE] Error fetching source file:", response.statusText);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Extract file extension from destination path
+    const ext = destinationPath.split(".").pop()?.toLowerCase();
+    if (!ext || !["png", "jpg", "jpeg", "webp"].includes(ext)) {
+      devLog.error("[COPY FILE] Invalid file extension:", ext);
+      return null;
+    }
+
+    // Upload to the new location
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("event-logos")
+      .upload(destinationPath, buffer, {
+        contentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      devLog.error("[COPY FILE] Upload error:", uploadError);
+      return null;
+    }
+
+    devLog.log("[COPY FILE] Success:", uploadData?.path);
+
+    // Return public URL
+    const { data: publicUrlData } = supabase.storage
+      .from("event-logos")
+      .getPublicUrl(destinationPath);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    devLog.error("[COPY FILE] Exception:", error);
     return null;
   }
 }
@@ -654,7 +721,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
 
     const supabase = createServiceClient();
 
-    // First, fetch the event to get logo URLs
+    // First, fetch the event to verify it exists
     const event = await prisma.sportEvent.findUnique({
       where: { eventId },
     });
@@ -666,53 +733,54 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
       };
     }
 
-    // Delete event logo from storage
-    if (event.logoUrl) {
-      try {
-        // Extract path from URL
-        const url = new URL(event.logoUrl);
-        const pathParts = url.pathname.split("/");
-        // Path format: /storage/v1/object/public/bucket-name/path/to/file
-        const bucketIndex = pathParts.indexOf("event-logos");
-        if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
-          const storagePath = pathParts.slice(bucketIndex + 1).join("/");
-          const { error: deleteError } = await supabase.storage
-            .from("event-logos")
-            .remove([storagePath]);
-          if (deleteError) {
-            devLog.error("Error deleting event logo from storage:", deleteError);
-          } else {
-            devLog.log("Deleted event logo:", storagePath);
-          }
+    // Delete files from storage by matching event ID in the path
+    // This is safer than using URLs from database (which could be incorrect from old bugs)
+    try {
+      // List all files in event-logos folder
+      const { data: eventLogos, error: listError } = await supabase.storage
+        .from("event-logos")
+        .list("event-logos", {
+          search: eventId, // Only find files that contain this event ID
+        });
+
+      if (!listError && eventLogos && eventLogos.length > 0) {
+        const filesToDelete = eventLogos.map((file) => `event-logos/${file.name}`);
+        devLog.log("[DELETE] Found event logos to delete:", filesToDelete);
+        const { error: deleteError } = await supabase.storage
+          .from("event-logos")
+          .remove(filesToDelete);
+        if (deleteError) {
+          devLog.error("[DELETE] Error deleting event logos:", deleteError);
+        } else {
+          devLog.log("[DELETE] Deleted event logos:", filesToDelete.length);
         }
-      } catch (error) {
-        devLog.error("Exception deleting event logo:", error);
       }
+    } catch (error) {
+      devLog.error("[DELETE] Exception listing/deleting event logos:", error);
     }
 
     // Delete sponsor logos from storage
-    if (event.sponsorLogos) {
-      const sponsorLogos = event.sponsorLogos as unknown as SponsorLogoData[];
-      for (const sponsor of sponsorLogos) {
-        try {
-          const url = new URL(sponsor.url);
-          const pathParts = url.pathname.split("/");
-          const bucketIndex = pathParts.indexOf("event-logos");
-          if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
-            const storagePath = pathParts.slice(bucketIndex + 1).join("/");
-            const { error: deleteError } = await supabase.storage
-              .from("event-logos")
-              .remove([storagePath]);
-            if (deleteError) {
-              devLog.error("Error deleting sponsor logo from storage:", deleteError);
-            } else {
-              devLog.log("Deleted sponsor logo:", storagePath);
-            }
-          }
-        } catch (error) {
-          devLog.error("Exception deleting sponsor logo:", error);
+    try {
+      const { data: sponsorLogos, error: listError } = await supabase.storage
+        .from("event-logos")
+        .list("sponsor-logos", {
+          search: eventId, // Only find files that contain this event ID
+        });
+
+      if (!listError && sponsorLogos && sponsorLogos.length > 0) {
+        const filesToDelete = sponsorLogos.map((file) => `sponsor-logos/${file.name}`);
+        devLog.log("[DELETE] Found sponsor logos to delete:", filesToDelete);
+        const { error: deleteError } = await supabase.storage
+          .from("event-logos")
+          .remove(filesToDelete);
+        if (deleteError) {
+          devLog.error("[DELETE] Error deleting sponsor logos:", deleteError);
+        } else {
+          devLog.log("[DELETE] Deleted sponsor logos:", filesToDelete.length);
         }
       }
+    } catch (error) {
+      devLog.error("[DELETE] Exception listing/deleting sponsor logos:", error);
     }
 
     // Delete event from database
@@ -725,7 +793,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     await prisma.sportEvent.delete({
       where: { eventId },
     });
-    devLog.log("Deleted event and associated access keys:", eventId);
+    devLog.log("[DELETE] Deleted event and associated access keys:", eventId);
 
     revalidatePath("/");
     revalidatePath("/dashboard");
@@ -1101,6 +1169,58 @@ export async function duplicateEvent(eventId: string): Promise<DuplicateEventRes
       MAX_EVENT_NAME_LENGTH
     );
 
+    // Copy logo file if exists
+    let newLogoUrl: string | null = null;
+    if (existingEvent.logoUrl) {
+      try {
+        const url = new URL(existingEvent.logoUrl);
+        const pathParts = url.pathname.split("/");
+        const bucketIndex = pathParts.indexOf("event-logos");
+        if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
+          const sourcePath = pathParts.slice(bucketIndex + 1).join("/");
+          // Generate new storage path with new event ID
+          const timestamp = Date.now();
+          const ext = sourcePath.split(".").pop() ?? "png";
+          const destinationPath = `event-logos/${newEventId}-${timestamp}.${ext}`;
+          newLogoUrl = await copyStorageFile(sourcePath, destinationPath);
+          devLog.log("[DUPLICATE] Copied logo:", sourcePath, "→", destinationPath);
+        }
+      } catch (error) {
+        devLog.error("[DUPLICATE] Error copying logo:", error);
+        // Continue without logo if copy fails
+      }
+    }
+
+    // Copy sponsor logos if exist
+    const existingSponsors = existingEvent.sponsorLogos as unknown as SponsorLogoData[] | null;
+    const newSponsorLogos: SponsorLogoData[] = [];
+
+    if (existingSponsors && existingSponsors.length > 0) {
+      const globalTimestamp = Date.now();
+      for (let i = 0; i < existingSponsors.length; i++) {
+        try {
+          const sponsor = existingSponsors[i];
+          const url = new URL(sponsor.url);
+          const pathParts = url.pathname.split("/");
+          const bucketIndex = pathParts.indexOf("event-logos");
+          if (bucketIndex !== -1 && bucketIndex + 1 < pathParts.length) {
+            const sourcePath = pathParts.slice(bucketIndex + 1).join("/");
+            // Generate new storage path with new event ID
+            const ext = sourcePath.split(".").pop() ?? "png";
+            const destinationPath = `sponsor-logos/${newEventId}-${globalTimestamp}-${i + 1}.${ext}`;
+            const newUrl = await copyStorageFile(sourcePath, destinationPath);
+            if (newUrl) {
+              newSponsorLogos.push({ name: sponsor.name, url: newUrl });
+              devLog.log("[DUPLICATE] Copied sponsor:", sourcePath, "→", destinationPath);
+            }
+          }
+        } catch (error) {
+          devLog.error("[DUPLICATE] Error copying sponsor logo:", error);
+          // Continue with remaining sponsors
+        }
+      }
+    }
+
     // Create duplicate event
     const newEvent = await prisma.sportEvent.create({
       data: {
@@ -1118,8 +1238,8 @@ export async function duplicateEvent(eventId: string): Promise<DuplicateEventRes
         usedKeys: 0,
         totalKeys: 0, // Reset to 0 for duplicated event - no keys generated yet
         visibility: existingEvent.visibility,
-        logoUrl: existingEvent.logoUrl,
-        sponsorLogos: existingEvent.sponsorLogos as unknown as Prisma.InputJsonValue,
+        logoUrl: newLogoUrl,
+        sponsorLogos: newSponsorLogos.length > 0 ? (newSponsorLogos as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
         sports: existingEvent.sports as unknown as Prisma.InputJsonValue,
       },
     });
@@ -1147,7 +1267,7 @@ export async function duplicateEvent(eventId: string): Promise<DuplicateEventRes
       totalKeys: newEvent.totalKeys,
       visibility: newEvent.visibility as "public" | "private",
       logoUrl: newEvent.logoUrl ?? undefined,
-      sponsorLogos: (newEvent.sponsorLogos as unknown as SponsorLogoData[]) ?? undefined,
+      sponsorLogos: newSponsorLogos.length > 0 ? newSponsorLogos : undefined,
     };
 
     return { success: true, event: transformedEvent };
