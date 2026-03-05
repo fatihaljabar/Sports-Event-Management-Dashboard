@@ -188,7 +188,7 @@ function validateBase64Size(base64: string, maxSize: number): boolean {
 export interface CreateEventData {
   name: string;
   type: "single" | "multi";
-  status: "upcoming" | "active" | "ongoing" | "completed" | "archived" | "inactive";
+  status: "upcoming" | "active" | "completed" | "archived";
   sports: SportCategory[];
   locationCity: string;
   locationTimezone: string;
@@ -816,7 +816,7 @@ export interface UpdateEventData {
   eventId: string;
   name: string;
   type: "single" | "multi";
-  status: "upcoming" | "active" | "ongoing" | "completed" | "archived" | "inactive";
+  status: "upcoming" | "active" | "completed" | "archived";
   sports: SportCategory[];
   locationCity: string;
   locationTimezone: string;

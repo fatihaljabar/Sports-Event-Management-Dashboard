@@ -1,6 +1,6 @@
 // Shared types for Event Management
 export type EventType = "single" | "multi";
-export type EventStatus = "active" | "inactive" | "upcoming" | "ongoing" | "completed" | "archived";
+export type EventStatus = "active" | "upcoming" | "completed" | "archived";
 
 export interface SportCategory {
   id: string;

@@ -172,7 +172,6 @@ export function useEventManagement() {
     return {
       all: convertedEvents.length,
       active: convertedEvents.filter((e) => e.status === "active").length,
-      inactive: convertedEvents.filter((e) => e.status === "inactive").length,
       upcoming: convertedEvents.filter((e) => e.status === "upcoming").length,
       completed: convertedEvents.filter((e) => e.status === "completed").length,
       archived: convertedEvents.filter((e) => e.status === "archived").length,

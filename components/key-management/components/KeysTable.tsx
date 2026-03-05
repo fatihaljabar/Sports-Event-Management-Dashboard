@@ -32,7 +32,7 @@ interface KeysTableProps {
   onRestore: (id: string) => void;
   onDelete: (id: string) => void;
   isReadOnly?: boolean;
-  eventStatus?: "active" | "upcoming" | "completed" | "archived" | "inactive" | "ongoing";
+  eventStatus?: "active" | "upcoming" | "completed" | "archived";
 }
 
 export function KeysTable({

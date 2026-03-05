@@ -1,6 +1,6 @@
 import type { SponsorLogoData } from "@/lib/types/event";
 
-export type EventStatus = "active" | "inactive" | "upcoming" | "completed" | "archived";
+export type EventStatus = "active" | "upcoming" | "completed" | "archived";
 export type EventType = "multi" | "single";
 export type FilterTab = "all" | EventStatus;
 export type SortField = "name" | "date" | "keys" | "location";

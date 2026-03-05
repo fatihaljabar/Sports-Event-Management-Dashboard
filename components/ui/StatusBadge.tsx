@@ -1,6 +1,6 @@
 import React from "react";
 
-export type EventStatus = "active" | "inactive" | "upcoming" | "ongoing" | "completed" | "archived";
+export type EventStatus = "active" | "upcoming" | "completed" | "archived";
 
 const STATUS_CONFIG: Record<
   EventStatus,
@@ -12,23 +12,11 @@ const STATUS_CONFIG: Record<
     color: "var(--em-status-active-color)",
     dot: "var(--em-status-active-dot)",
   },
-  inactive: {
-    label: "Inactive",
-    bg: "var(--em-bg-red-soft)",
-    color: "var(--em-text-red)",
-    dot: "#EF4444",
-  },
   upcoming: {
     label: "Upcoming",
     bg: "var(--em-status-upcoming-bg)",
     color: "var(--em-status-upcoming-color)",
     dot: "var(--em-status-upcoming-dot)",
-  },
-  ongoing: {
-    label: "Ongoing",
-    bg: "#FEF3C7",
-    color: "#B45309",
-    dot: "#F59E0B",
   },
   completed: {
     label: "Completed",
