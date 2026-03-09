@@ -109,8 +109,12 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
     setStartDate(start.toISOString().split('T')[0]);
     setEndDate(end.toISOString().split('T')[0]);
 
-    // Set sports - event.sports is already SportCategory[]
-    setSelectedSports(event.sports);
+    // Set sports - filter to only include sports that exist in SPORT_OPTIONS
+    // This prevents undefined errors if event has deprecated/invalid sport IDs
+    const validSports = event.sports.filter((sport) =>
+      SPORT_OPTIONS.some((option) => option.id === sport.id)
+    );
+    setSelectedSports(validSports);
 
     // Set location - combine city and venue for LocationPicker
     const locationString = event.location.venue
@@ -139,17 +143,31 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
   }, [event]);
 
   const handleSportToggle = (sportId: string) => {
-    setSelectedSports((prev) =>
-      prev.some((s) => s.id === sportId)
-        ? prev.filter((s) => s.id !== sportId)
-        : [...prev, SPORT_OPTIONS.find((s) => s.id === sportId)!]
-    );
+    setSelectedSports((prev) => {
+      const isAlreadySelected = prev.some((s) => s.id === sportId);
+
+      // If deselecting, just remove it
+      if (isAlreadySelected) {
+        return prev.filter((s) => s.id !== sportId);
+      }
+
+      // For single event type, only allow 1 sport
+      if (eventType === "single") {
+        const sportToAdd = SPORT_OPTIONS.find((s) => s.id === sportId);
+        return sportToAdd ? [sportToAdd] : prev;
+      }
+
+      // For multi event type, add to selection
+      const sportToAdd = SPORT_OPTIONS.find((s) => s.id === sportId);
+      return sportToAdd ? [...prev, sportToAdd] : prev;
+    });
   };
 
   const handleEventTypeChange = (type: "single" | "multi") => {
     setEventType(type);
+    // If switching to single and multiple sports selected, keep only the first one
     if (type === "single" && selectedSports.length > 1) {
-      setSelectedSports([selectedSports[0]]);
+      setSelectedSports(selectedSports.slice(0, 1));
     }
   };
 
