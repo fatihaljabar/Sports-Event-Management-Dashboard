@@ -10,7 +10,6 @@ import {
   exportEventData,
 } from "@/app/actions/events";
 import type {
-  SponsorLogoData,
   SportEvent as ApiSportEvent,
 } from "@/lib/types/event";
 import type {
@@ -19,7 +18,6 @@ import type {
   SortField,
   SortDirection,
   EventTypeFilter,
-  EventManagementState,
 } from "./types";
 import { ITEMS_PER_PAGE } from "./constants";
 
@@ -28,9 +26,9 @@ export function useEventManagement() {
     events,
     isLoading,
     deleteEvent: deleteEventFromStore,
-    updateEvent: updateEventInStore,
+    updateEvent: _updateEventInStore,
     archiveEvent: archiveEventInStore,
-    unarchiveEvent: unarchiveEventInStore,
+    unarchiveEvent: _unarchiveEventInStore,
     duplicateEvent: duplicateEventInStore,
     refreshEvents,
   } = useEvents();
