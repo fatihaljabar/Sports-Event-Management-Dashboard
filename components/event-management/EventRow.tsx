@@ -719,7 +719,7 @@ function ActionsCell({
 
       {/* Edit */}
       <button
-        className="flex items-center justify-center rounded-lg transition-all"
+        className="flex items-center gap-1.5 rounded-lg transition-all"
         title={
           event.status === "completed"
             ? "Cannot edit completed event"
@@ -733,10 +733,14 @@ function ActionsCell({
         }
         style={{
           height: "32px",
+          padding: "0 10px",
           minWidth: "32px",
           border: "1.5px solid #F1F5F9",
           backgroundColor: "transparent",
           color: event.status === "completed" ? "#CBD5E1" : "#64748B",
+          fontSize: "0.72rem",
+          fontFamily: '"Inter", sans-serif',
+          fontWeight: 500,
           cursor: event.status === "completed" ? "not-allowed" : "pointer",
           opacity: event.status === "completed" ? 0.6 : 1,
         }}
@@ -752,6 +756,7 @@ function ActionsCell({
         }}
       >
         <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} />
+        <span>Edit</span>
       </button>
 
       {/* More (Meatball Menu) */}
