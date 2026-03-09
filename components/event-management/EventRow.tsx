@@ -15,10 +15,6 @@ import { DAYS_CONFIG } from "./constants";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { SportEvent, EventHandlers } from "./types";
 
-// Font constants to avoid quote escaping issues
-const FONT_INTER = '"Inter", sans-serif';
-const FONT_MONO = '"JetBrains Mono", monospace';
-
 interface EventRowProps {
   event: SportEvent;
   isLast: boolean;
@@ -632,7 +628,7 @@ function ActionsCell({
   isDeleting,
   meatballRef,
   handlers,
-  dropDirection,
+  dropDirection: _dropDirection,
 }: ActionsCellProps) {
   if (isConfirming) {
     return (
@@ -722,18 +718,41 @@ function ActionsCell({
       />
 
       {/* Edit */}
-      <ActionButton
-        icon={<Pencil className="w-3.5 h-3.5" strokeWidth={1.75} />}
-        label="Edit"
-        color="#64748B"
-        bgHover="#F8FAFC"
-        borderHover="#E2E8F0"
+      <button
+        className="flex items-center justify-center rounded-lg transition-all"
+        title={
+          event.status === "completed"
+            ? "Cannot edit completed event"
+            : "Edit event"
+        }
+        disabled={event.status === "completed"}
         onClick={() =>
           handlers.onEdit
             ? handlers.onEdit(event.id)
             : handlers.onEventClick(event.id)
         }
-      />
+        style={{
+          height: "32px",
+          minWidth: "32px",
+          border: "1.5px solid #F1F5F9",
+          backgroundColor: "transparent",
+          color: event.status === "completed" ? "#CBD5E1" : "#64748B",
+          cursor: event.status === "completed" ? "not-allowed" : "pointer",
+          opacity: event.status === "completed" ? 0.6 : 1,
+        }}
+        onMouseEnter={(e) => {
+          if (event.status !== "completed") {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
+          }
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+          (e.currentTarget as HTMLButtonElement).style.borderColor = "#F1F5F9";
+        }}
+      >
+        <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} />
+      </button>
 
       {/* More (Meatball Menu) */}
       <div ref={meatballRef} className="relative">
