@@ -15,6 +15,7 @@ import { LocationPicker } from "@/components/ui/location-picker/LocationPicker";
 import { TimezoneAlert } from "@/components/ui/TimezoneAlert";
 import { updateEvent } from "@/app/actions/events";
 import { toast } from "sonner";
+import { SPORT_OPTIONS } from "@/lib/constants/event-constants";
 import type { SportEvent as ApiSportEvent, SportCategory } from "@/lib/types/event";
 
 interface EditEventModalProps {
@@ -22,29 +23,6 @@ interface EditEventModalProps {
   onClose: () => void;
   onUpdate?: () => void;
 }
-
-const SPORT_OPTIONS: SportCategory[] = [
-  { id: "athletics", label: "Athletics", emoji: "🏃" },
-  { id: "swimming", label: "Swimming", emoji: "🏊" },
-  { id: "cycling", label: "Cycling", emoji: "🚴" },
-  { id: "gymnastics", label: "Gymnastics", emoji: "🤸" },
-  { id: "basketball", label: "Basketball", emoji: "🏀" },
-  { id: "football", label: "Football", emoji: "⚽" },
-  { id: "tennis", label: "Tennis", emoji: "🎾" },
-  { id: "volleyball", label: "Volleyball", emoji: "🏐" },
-  { id: "badminton", label: "Badminton", emoji: "🏸" },
-  { id: "table-tennis", label: "Table Tennis", emoji: "🏓" },
-  { id: "boxing", label: "Boxing", emoji: "🥊" },
-  { id: "judo", label: "Judo", emoji: "🥋" },
-  { id: "karate", label: "Karate", emoji: "🥋" },
-  { id: "taekwondo", label: "Taekwondo", emoji: "🥋" },
-  { id: "archery", label: "Archery", emoji: "🏹" },
-  { id: "shooting", label: "Shooting", emoji: "🔫" },
-  { id: "fencing", label: "Fencing", emoji: "🤺" },
-  { id: "rowing", label: "Rowing", emoji: "🚣" },
-  { id: "canoe", label: "Canoe/Kayak", emoji: "🛶" },
-  { id: "sailing", label: "Sailing", emoji: "⛵" },
-];
 
 export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps) {
   // Form state
