@@ -2,13 +2,13 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sidebar } from "@/components/Sidebar";
-import { TopHeader } from "@/components/TopHeader";
-import { ScoreboardCards } from "@/components/ScoreboardCards";
-import { EventsTable } from "@/components/EventsTable";
-import { MedalTally } from "@/components/MedalTally";
-import { ActivityFeed } from "@/components/ActivityFeed";
-import { PerformanceChart } from "@/components/PerformanceChart";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { TopHeader } from "@/components/layout/TopHeader";
+import { ScoreboardCards } from "@/components/dashboard/panels/ScoreboardCards";
+import { EventsTable } from "@/components/dashboard/panels/EventsTable";
+import { MedalTally } from "@/components/dashboard/panels/MedalTally";
+import { ActivityFeed } from "@/components/dashboard/panels/ActivityFeed";
+import { PerformanceChart } from "@/components/dashboard/panels/PerformanceChart";
 import { CreateEventModal } from "@/components/CreateEventModal";
 import { ParticipantsPage } from "@/components/ParticipantsPage";
 import { CompetitionResultsPage } from "@/components/CompetitionResultsPage";
