@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import { useDashboardSync } from "@/hooks/useDashboardSync";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopHeader } from "@/components/layout/TopHeader";
 import { ScoreboardCards } from "@/components/dashboard/panels/ScoreboardCards";
@@ -18,6 +20,16 @@ export function DashboardLayout() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Dashboard sync - tracks last data fetch time from server
+  const { lastSyncTime } = useDashboardSync();
+
+  // Current date for display (static - updates on page refresh)
+  const currentTime = new Date();
+  const formattedDate = format(currentTime, "EEEE, MMMM d, yyyy");
+  const formattedTime = lastSyncTime
+    ? format(lastSyncTime, "HH:mm:ss 'UTC'")
+    : format(currentTime, "HH:mm:ss 'UTC'");
 
   const handleNavChange = (id: string) => {
     if (id === "events") {
@@ -82,17 +94,7 @@ export function DashboardLayout() {
                       marginTop: "0.4rem",
                     }}
                   >
-                    Tuesday, February 24, 2026 &nbsp;·&nbsp;
-                    <span
-                      style={{
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: "0.78rem",
-                        color: "#4ADE80",
-                      }}
-                    >
-                      ● LIVE
-                    </span>
-                    &nbsp; All systems operational
+                    {formattedDate}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -115,7 +117,7 @@ export function DashboardLayout() {
                       fontWeight: 500,
                     }}
                   >
-                    02:14:33 UTC
+                    {formattedTime}
                   </span>
                 </div>
               </div>

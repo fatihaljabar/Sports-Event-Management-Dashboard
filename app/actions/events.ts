@@ -684,6 +684,26 @@ export async function getEvents(): Promise<SportEvent[]> {
 }
 
 /**
+ * Get count of active events (ongoing or upcoming)
+ */
+export async function getActiveEventsCount(): Promise<number> {
+  try {
+    const count = await prisma.sportEvent.count({
+      where: {
+        status: {
+          in: ["ongoing", "upcoming"],
+        },
+      },
+    });
+
+    return count;
+  } catch (error) {
+    devLog.error("Error fetching active events count:", error);
+    return 0;
+  }
+}
+
+/**
  * Get a single event by ID
  */
 export async function getEventById(eventId: string): Promise<SportEvent | null> {

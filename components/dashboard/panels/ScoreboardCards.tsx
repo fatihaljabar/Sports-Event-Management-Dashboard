@@ -1,5 +1,9 @@
+"use client";
+
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Calendar, Users, Award, KeyRound, TrendingUp, TrendingDown } from "lucide-react";
+import { getActiveEventsCount } from "@/app/actions/events";
 
 interface CardData {
   label: string;
@@ -12,10 +16,21 @@ interface CardData {
   subLabel: string;
 }
 
+function useActiveEventsCount() {
+  return useQuery({
+    queryKey: ["active-events-count"],
+    queryFn: async () => {
+      const count = await getActiveEventsCount();
+      return count;
+    },
+    staleTime: 60000, // 1 minute
+  });
+}
+
 const cards: CardData[] = [
   {
     label: "Active Events",
-    value: "18",
+    value: "0", // Will be replaced with real data
     trend: "+12.0%",
     trendUp: true,
     icon: Calendar,
@@ -56,11 +71,16 @@ const cards: CardData[] = [
 ];
 
 export function ScoreboardCards() {
+  const { data: activeEventsCount = 0 } = useActiveEventsCount();
+
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {cards.map((card, idx) => {
         const Icon = card.icon;
         const TrendIcon = card.trendUp ? TrendingUp : TrendingDown;
+        const displayValue = card.label === "Active Events"
+          ? String(activeEventsCount)
+          : card.value;
         return (
           <div
             key={idx}
@@ -130,7 +150,7 @@ export function ScoreboardCards() {
                   display: "block",
                 }}
               >
-                {card.value}
+                {displayValue}
               </span>
             </div>
 
