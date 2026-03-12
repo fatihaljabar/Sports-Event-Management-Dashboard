@@ -481,7 +481,7 @@ export function EventsTable() {
                   <td style={{ padding: "1rem 1.25rem" }}>
                     {event.sports && event.sports.length > 0 ? (
                       <div
-                        className="flex items-center gap-0.5"
+                        className="flex items-center gap-1"
                         style={{
                           maxWidth: "140px",
                           justifyContent: event.sports.length === 1 ? "center" : "flex-start"
@@ -489,21 +489,32 @@ export function EventsTable() {
                         title={event.sports.map(s => s.emoji).join(" ")}
                       >
                         {event.sports.slice(0, 4).map((sport, idx) => (
-                          <span key={idx} style={{ fontSize: "1rem", flexShrink: 0 }}>
+                          <span
+                            key={idx}
+                            className="flex items-center justify-center rounded border"
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              backgroundColor: "#F1F5F9",
+                              border: "1.5px solid #FFFFFF",
+                              fontSize: "0.75rem",
+                              flexShrink: 0,
+                            }}
+                          >
                             {sport.emoji}
                           </span>
                         ))}
                         {event.sports.length > 4 && (
                           <span
+                            className="flex items-center justify-center rounded border font-medium"
                             style={{
+                              width: "20px",
+                              height: "20px",
+                              backgroundColor: "#E2E8F0",
+                              border: "1.5px solid #FFFFFF",
                               color: "#64748B",
-                              fontSize: "0.65rem",
-                              fontFamily: '"JetBrains Mono", monospace',
-                              backgroundColor: "#F1F5F9",
-                              padding: "1px 4px",
-                              borderRadius: "3px",
-                              whiteSpace: "nowrap",
-                              marginLeft: "2px",
+                              fontSize: "0.6rem",
+                              flexShrink: 0,
                             }}
                           >
                             +{event.sports.length - 4}
@@ -536,28 +547,26 @@ export function EventsTable() {
                             key={idx}
                             src={sponsor.url}
                             alt={sponsor.name}
+                            className="rounded border object-contain"
                             style={{
                               width: "20px",
                               height: "20px",
-                              borderRadius: "4px",
-                              objectFit: "contain",
                               backgroundColor: "#F8FAFC",
-                              border: "1px solid #E2E8F0",
+                              border: "1.5px solid #FFFFFF",
                             }}
                             title={sponsor.name}
                           />
                         ))}
                         {event.sponsorLogos.length > 3 && (
                           <span
+                            className="flex items-center justify-center rounded border font-medium"
                             style={{
+                              width: "20px",
+                              height: "20px",
+                              backgroundColor: "#E2E8F0",
+                              border: "1.5px solid #FFFFFF",
                               color: "#64748B",
-                              fontSize: "0.65rem",
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontWeight: 500,
-                              backgroundColor: "#F1F5F9",
-                              borderRadius: "4px",
-                              padding: "2px 6px",
-                              border: "1px solid #E2E8F0",
+                              fontSize: "0.6rem",
                             }}
                           >
                             +{event.sponsorLogos.length - 3}
