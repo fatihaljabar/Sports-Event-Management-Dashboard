@@ -691,7 +691,7 @@ export async function getActiveEventsCount(): Promise<number> {
     const count = await prisma.sportEvent.count({
       where: {
         status: {
-          in: ["ongoing", "upcoming"],
+          in: ["ONGOING", "UPCOMING"],
         },
       },
     });
