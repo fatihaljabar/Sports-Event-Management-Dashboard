@@ -64,6 +64,8 @@ export function EventsTable() {
   const [showFilter, setShowFilter] = useState(false);
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Filter tabs that can be shown/hidden
   const availableFilters = ["All", "Active", "Upcoming", "Scheduled", "Completed"];
@@ -127,6 +129,7 @@ export function EventsTable() {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter((e) =>
+        e.id.toLowerCase().includes(query) ||
         e.name.toLowerCase().includes(query) ||
         e.location.toLowerCase().includes(query) ||
         e.country.toLowerCase().includes(query) ||
@@ -136,6 +139,18 @@ export function EventsTable() {
 
     return result;
   }, [convertedEvents, activeFilter, searchQuery]);
+
+  // Reset to page 1 when filter or search changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, searchQuery]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedEvents = filtered.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleSort = (col: string) => {
     if (sortCol === col) {
@@ -385,7 +400,7 @@ export function EventsTable() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((event, idx) => {
+            {paginatedEvents.map((event, idx) => {
               const st = statusConfig[event.status];
               const isEven = idx % 2 === 0;
               return (
@@ -464,33 +479,42 @@ export function EventsTable() {
 
                   {/* Sport */}
                   <td style={{ padding: "1rem 1.25rem" }}>
-                    <div className="flex items-center gap-1 overflow-hidden" style={{ maxWidth: "120px" }}>
-                      {event.sports && event.sports.length > 0 ? (
-                        <>
-                          <span style={{ fontSize: "1rem", flexShrink: 0 }}>
-                            {event.sports[0]?.emoji || "🏆"}
+                    {event.sports && event.sports.length > 0 ? (
+                      <div
+                        className="flex items-center gap-0.5"
+                        style={{
+                          maxWidth: "140px",
+                          justifyContent: event.sports.length === 1 ? "center" : "flex-start"
+                        }}
+                        title={event.sports.map(s => s.emoji).join(" ")}
+                      >
+                        {event.sports.slice(0, 4).map((sport, idx) => (
+                          <span key={idx} style={{ fontSize: "1rem", flexShrink: 0 }}>
+                            {sport.emoji}
                           </span>
-                          {event.sports.length > 1 && (
-                            <span
-                              style={{
-                                color: "#64748B",
-                                fontSize: "0.7rem",
-                                fontFamily: '"JetBrains Mono", monospace',
-                                backgroundColor: "#F1F5F9",
-                                padding: "2px 6px",
-                                borderRadius: "4px",
-                                whiteSpace: "nowrap",
-                              }}
-                              title={event.sports.map(s => s.emoji).join(" ")}
-                            >
-                              +{event.sports.length - 1}
-                            </span>
-                          )}
-                        </>
-                      ) : (
+                        ))}
+                        {event.sports.length > 4 && (
+                          <span
+                            style={{
+                              color: "#64748B",
+                              fontSize: "0.65rem",
+                              fontFamily: '"JetBrains Mono", monospace',
+                              backgroundColor: "#F1F5F9",
+                              padding: "1px 4px",
+                              borderRadius: "3px",
+                              whiteSpace: "nowrap",
+                              marginLeft: "2px",
+                            }}
+                          >
+                            +{event.sports.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex justify-center" style={{ width: "100%" }}>
                         <span style={{ fontSize: "1rem" }}>🏆</span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </td>
 
                   {/* Sponsors */}
@@ -617,27 +641,66 @@ export function EventsTable() {
             fontFamily: '"Inter", sans-serif',
           }}
         >
-          Showing {filtered.length} of {events.length} events
+          Showing {paginatedEvents.length} of {filtered.length} events
         </p>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3].map((p) => (
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
             <button
-              key={p}
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
               className="rounded flex items-center justify-center transition-colors"
               style={{
                 width: "28px",
                 height: "28px",
                 fontSize: "0.75rem",
                 fontFamily: '"JetBrains Mono", monospace',
-                backgroundColor: p === 1 ? "#2563EB" : "transparent",
-                color: p === 1 ? "#fff" : "#94A3B8",
-                border: p === 1 ? "none" : "1px solid #E2E8F0",
+                backgroundColor: "transparent",
+                color: currentPage === 1 ? "#CBD5E1" : "#94A3B8",
+                border: "1px solid #E2E8F0",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                opacity: currentPage === 1 ? 0.5 : 1,
               }}
             >
-              {p}
+              ‹
             </button>
-          ))}
-        </div>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setCurrentPage(p)}
+                className="rounded flex items-center justify-center transition-colors"
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  fontSize: "0.75rem",
+                  fontFamily: '"JetBrains Mono", monospace',
+                  backgroundColor: p === currentPage ? "#2563EB" : "transparent",
+                  color: p === currentPage ? "#fff" : "#94A3B8",
+                  border: p === currentPage ? "none" : "1px solid #E2E8F0",
+                }}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded flex items-center justify-center transition-colors"
+              style={{
+                width: "28px",
+                height: "28px",
+                fontSize: "0.75rem",
+                fontFamily: '"JetBrains Mono", monospace',
+                backgroundColor: "transparent",
+                color: currentPage === totalPages ? "#CBD5E1" : "#94A3B8",
+                border: "1px solid #E2E8F0",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                opacity: currentPage === totalPages ? 0.5 : 1,
+              }}
+            >
+              ›
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
