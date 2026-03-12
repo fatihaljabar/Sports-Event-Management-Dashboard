@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useDashboardSync } from "@/hooks/useDashboardSync";
@@ -20,16 +20,22 @@ export function DashboardLayout() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Dashboard sync - tracks last data fetch time from server
   const { lastSyncTime } = useDashboardSync();
 
-  // Current date for display (static - updates on page refresh)
-  const currentTime = new Date();
+  // Only render date/time on client to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Current date for display - use stable value until mounted
+  const currentTime = mounted ? new Date() : new Date("2026-01-01T00:00:00Z");
   const formattedDate = format(currentTime, "EEEE, MMMM d, yyyy");
   const formattedTime = lastSyncTime
     ? format(lastSyncTime, "HH:mm:ss 'UTC'")
-    : format(currentTime, "HH:mm:ss 'UTC'");
+    : (mounted ? format(currentTime, "HH:mm:ss 'UTC'") : "00:00:00 UTC");
 
   const handleNavChange = (id: string) => {
     if (id === "events") {
@@ -93,6 +99,7 @@ export function DashboardLayout() {
                       fontFamily: '"Inter", sans-serif',
                       marginTop: "0.4rem",
                     }}
+                    suppressHydrationWarning
                   >
                     {formattedDate}
                   </p>
@@ -116,6 +123,7 @@ export function DashboardLayout() {
                       fontFamily: '"JetBrains Mono", monospace',
                       fontWeight: 500,
                     }}
+                    suppressHydrationWarning
                   >
                     {formattedTime}
                   </span>
