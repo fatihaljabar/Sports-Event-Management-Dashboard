@@ -26,8 +26,6 @@ const statusConfig: Record<EventStatus, { bg: string; color: string; dot: string
   Completed: { bg: "#F1F5F9", color: "#475569", dot: "#94A3B8" },
 };
 
-const filterTabs = ["All", "Active", "Upcoming", "Scheduled", "Completed"];
-
 // Search input component
 function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
@@ -493,11 +491,12 @@ export function EventsTable() {
                             key={idx}
                             className="flex items-center justify-center rounded border"
                             style={{
-                              width: "20px",
-                              height: "20px",
+                              minWidth: "24px",
+                              height: "24px",
+                              padding: "2px 4px",
                               backgroundColor: "#F1F5F9",
                               border: "1.5px solid #FFFFFF",
-                              fontSize: "0.75rem",
+                              fontSize: "1rem",
                               flexShrink: 0,
                             }}
                           >
@@ -508,12 +507,13 @@ export function EventsTable() {
                           <span
                             className="flex items-center justify-center rounded border font-medium"
                             style={{
-                              width: "20px",
-                              height: "20px",
+                              minWidth: "24px",
+                              height: "24px",
+                              padding: "2px 4px",
                               backgroundColor: "#E2E8F0",
                               border: "1.5px solid #FFFFFF",
                               color: "#64748B",
-                              fontSize: "0.6rem",
+                              fontSize: "0.65rem",
                               flexShrink: 0,
                             }}
                           >
@@ -549,8 +549,9 @@ export function EventsTable() {
                             alt={sponsor.name}
                             className="rounded border object-contain"
                             style={{
-                              width: "20px",
-                              height: "20px",
+                              minWidth: "24px",
+                              height: "24px",
+                              padding: "2px 4px",
                               backgroundColor: "#F8FAFC",
                               border: "1.5px solid #FFFFFF",
                             }}
@@ -561,12 +562,13 @@ export function EventsTable() {
                           <span
                             className="flex items-center justify-center rounded border font-medium"
                             style={{
-                              width: "20px",
-                              height: "20px",
+                              minWidth: "24px",
+                              height: "24px",
+                              padding: "2px 4px",
                               backgroundColor: "#E2E8F0",
                               border: "1.5px solid #FFFFFF",
                               color: "#64748B",
-                              fontSize: "0.6rem",
+                              fontSize: "0.65rem",
                             }}
                           >
                             +{event.sponsorLogos.length - 3}
