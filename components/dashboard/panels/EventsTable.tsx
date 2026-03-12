@@ -1,17 +1,18 @@
 import React, { useState, useMemo } from "react";
-import { MapPin, Search, Filter, Edit2, Eye, ChevronUp, ChevronDown } from "lucide-react";
+import { MapPin, Search, Filter, ChevronUp, ChevronDown } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
-import type { SponsorLogoData } from "@/lib/types/event";
+import type { SponsorLogoData, SportCategory } from "@/lib/types/event";
 
 type EventStatus = "Active" | "Upcoming" | "Scheduled" | "Completed";
 
-interface SportEvent {
+interface ConvertedEvent {
   id: string;
   name: string;
   location: string;
   country: string;
   sport: string;
   sportEmoji: string;
+  sports: SportCategory[];
   date: string;
   status: EventStatus;
   athletes: number;
@@ -27,11 +28,45 @@ const statusConfig: Record<EventStatus, { bg: string; color: string; dot: string
 
 const filterTabs = ["All", "Active", "Upcoming", "Scheduled", "Completed"];
 
+// Search input component
+function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <input
+      id="events-search-input"
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Search events..."
+      style={{
+        border: "1.5px solid #E2E8F0",
+        borderRadius: "6px",
+        padding: "6px 12px",
+        fontSize: "0.75rem",
+        fontFamily: '"Inter", sans-serif',
+        color: "#0F172A",
+        outline: "none",
+        width: "200px",
+      }}
+      onFocus={(e) => {
+        (e.target as HTMLInputElement).style.borderColor = "#2563EB";
+      }}
+      onBlur={(e) => {
+        (e.target as HTMLInputElement).style.borderColor = "#E2E8F0";
+      }}
+    />
+  );
+}
+
 export function EventsTable() {
   const { events } = useEvents();
   const [activeFilter, setActiveFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilter, setShowFilter] = useState(false);
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // Filter tabs that can be shown/hidden
+  const availableFilters = ["All", "Active", "Upcoming", "Scheduled", "Completed"];
 
   // Convert events from database to the format expected by this component
   const convertedEvents = useMemo(() => {
@@ -70,6 +105,7 @@ export function EventsTable() {
         country,
         sport: event.sports[0]?.label || "Multi-sport",
         sportEmoji: event.sports[0]?.emoji || "🏆",
+        sports: event.sports,
         date: dateStr,
         status,
         athletes: event.maxParticipants,
@@ -78,10 +114,28 @@ export function EventsTable() {
     });
   }, [events]);
 
-  const filtered =
-    activeFilter === "All"
-      ? convertedEvents
-      : convertedEvents.filter((e) => e.status === activeFilter);
+  // Apply search and filter
+  const filtered = useMemo(() => {
+    let result = convertedEvents;
+
+    // Apply status filter
+    if (activeFilter !== "All") {
+      result = result.filter((e) => e.status === activeFilter);
+    }
+
+    // Apply search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((e) =>
+        e.name.toLowerCase().includes(query) ||
+        e.location.toLowerCase().includes(query) ||
+        e.country.toLowerCase().includes(query) ||
+        e.sport.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [convertedEvents, activeFilter, searchQuery]);
 
   const handleSort = (col: string) => {
     if (sortCol === col) {
@@ -161,70 +215,115 @@ export function EventsTable() {
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors"
             style={{
               border: "1.5px solid #E2E8F0",
-              color: "#64748B",
+              color: showFilter ? "#2563EB" : "#64748B",
               fontSize: "0.75rem",
               fontFamily: '"Inter", sans-serif',
-              backgroundColor: "transparent",
+              backgroundColor: showFilter ? "#EFF6FF" : "transparent",
             }}
+            onClick={() => setShowFilter(!showFilter)}
             onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC")
+              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = showFilter ? "#EFF6FF" : "#F8FAFC")
             }
             onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent")
+              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = showFilter ? "#EFF6FF" : "transparent")
             }
           >
             <Filter className="w-3.5 h-3.5" strokeWidth={1.75} />
             Filter
           </button>
-          <button
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors"
-            style={{
-              border: "1.5px solid #E2E8F0",
-              color: "#64748B",
-              fontSize: "0.75rem",
-              fontFamily: '"Inter", sans-serif',
-              backgroundColor: "transparent",
-            }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent")
-            }
-          >
-            <Search className="w-3.5 h-3.5" strokeWidth={1.75} />
-            Search
-          </button>
+          <div className="relative">
+            <button
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors"
+              style={{
+                border: "1.5px solid #E2E8F0",
+                color: searchQuery ? "#2563EB" : "#64748B",
+                fontSize: "0.75rem",
+                fontFamily: '"Inter", sans-serif',
+                backgroundColor: searchQuery ? "#EFF6FF" : "transparent",
+              }}
+              onClick={() => {
+                // Toggle search mode
+                if (!searchQuery) {
+                  const searchInput = document.getElementById("events-search-input");
+                  if (searchInput) {
+                    (searchInput as HTMLInputElement).focus();
+                  }
+                }
+              }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.backgroundColor = searchQuery ? "#EFF6FF" : "#F8FAFC")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.backgroundColor = searchQuery ? "#EFF6FF" : "transparent")
+              }
+            >
+              <Search className="w-3.5 h-3.5" strokeWidth={1.75} />
+              Search
+            </button>
+          </div>
+          {/* Inline Search Input */}
+          <SearchInput value={searchQuery} onChange={setSearchQuery} />
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div
-        className="flex items-center gap-1 px-6 py-2.5"
-        style={{ borderBottom: "1px solid #F1F5F9", backgroundColor: "#FAFBFC" }}
-      >
-        {filterTabs.map((tab) => (
+      {/* Search Bar - shown when there's a search query */}
+      {searchQuery && (
+        <div
+          className="flex items-center gap-2 px-6 py-2"
+          style={{ borderBottom: "1px solid #F1F5F9", backgroundColor: "#FAFBFC" }}
+        >
+          <span style={{ color: "#64748B", fontSize: "0.75rem", fontFamily: '"Inter", sans-serif' }}>
+            Found {filtered.length} result{filtered.length !== 1 ? "s" : ""} for "{searchQuery}"
+          </span>
           <button
-            key={tab}
-            onClick={() => setActiveFilter(tab)}
-            className="rounded-lg px-3 py-1 transition-all"
+            onClick={() => setSearchQuery("")}
             style={{
+              color: "#2563EB",
               fontSize: "0.75rem",
               fontFamily: '"Inter", sans-serif',
-              fontWeight: activeFilter === tab ? 500 : 400,
-              color: activeFilter === tab ? "#2563EB" : "#94A3B8",
-              backgroundColor:
-                activeFilter === tab ? "#EFF6FF" : "transparent",
-              border:
-                activeFilter === tab
-                  ? "1px solid #BFDBFE"
-                  : "1px solid transparent",
+              fontWeight: 500,
+              backgroundColor: "transparent",
+              border: "none",
+              cursor: "pointer",
             }}
           >
-            {tab}
+            Clear
           </button>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Filter Tabs - shown when showFilter is true */}
+      {showFilter && (
+        <div
+          className="flex items-center gap-1 px-6 py-2.5"
+          style={{ borderBottom: "1px solid #F1F5F9", backgroundColor: "#FAFBFC" }}
+        >
+          {availableFilters.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => {
+                setActiveFilter(tab);
+                setShowFilter(false);
+              }}
+              className="rounded-lg px-3 py-1 transition-all"
+              style={{
+                fontSize: "0.75rem",
+                fontFamily: '"Inter", sans-serif',
+                fontWeight: activeFilter === tab ? 500 : 400,
+                color: activeFilter === tab ? "#2563EB" : "#94A3B8",
+                backgroundColor:
+                  activeFilter === tab ? "#EFF6FF" : "transparent",
+                border:
+                  activeFilter === tab
+                    ? "1px solid #BFDBFE"
+                    : "1px solid transparent",
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -239,7 +338,6 @@ export function EventsTable() {
                 { key: "date", label: "Date" },
                 { key: "athletes", label: "Athletes" },
                 { key: "status", label: "Status" },
-                { key: "actions", label: "Actions" },
               ].map((col) => (
                 <th
                   key={col.key}
@@ -366,17 +464,32 @@ export function EventsTable() {
 
                   {/* Sport */}
                   <td style={{ padding: "1rem 1.25rem" }}>
-                    <div className="flex items-center gap-2">
-                      <span style={{ fontSize: "1.1rem" }}>{event.sportEmoji}</span>
-                      <span
-                        style={{
-                          color: "#374151",
-                          fontSize: "0.8rem",
-                          fontFamily: '"Inter", sans-serif',
-                        }}
-                      >
-                        {event.sport}
-                      </span>
+                    <div className="flex items-center gap-1 overflow-hidden" style={{ maxWidth: "120px" }}>
+                      {event.sports && event.sports.length > 0 ? (
+                        <>
+                          <span style={{ fontSize: "1rem", flexShrink: 0 }}>
+                            {event.sports[0]?.emoji || "🏆"}
+                          </span>
+                          {event.sports.length > 1 && (
+                            <span
+                              style={{
+                                color: "#64748B",
+                                fontSize: "0.7rem",
+                                fontFamily: '"JetBrains Mono", monospace',
+                                backgroundColor: "#F1F5F9",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                whiteSpace: "nowrap",
+                              }}
+                              title={event.sports.map(s => s.emoji).join(" ")}
+                            >
+                              +{event.sports.length - 1}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ fontSize: "1rem" }}>🏆</span>
+                      )}
                     </div>
                   </td>
 
@@ -484,54 +597,6 @@ export function EventsTable() {
                       />
                       {event.status}
                     </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td style={{ padding: "1rem 1.25rem" }}>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-all"
-                        style={{
-                          border: "1.5px solid #E2E8F0",
-                          color: "#2563EB",
-                          fontSize: "0.72rem",
-                          fontFamily: '"Inter", sans-serif',
-                          fontWeight: 500,
-                          backgroundColor: "transparent",
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#EFF6FF";
-                          (e.currentTarget as HTMLButtonElement).style.borderColor = "#BFDBFE";
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                          (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
-                        }}
-                      >
-                        <Edit2 className="w-3 h-3" strokeWidth={2} />
-                        Edit
-                      </button>
-                      <button
-                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-all"
-                        style={{
-                          border: "1.5px solid #E2E8F0",
-                          color: "#64748B",
-                          fontSize: "0.72rem",
-                          fontFamily: '"Inter", sans-serif',
-                          fontWeight: 500,
-                          backgroundColor: "transparent",
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#F8FAFC";
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                        }}
-                      >
-                        <Eye className="w-3 h-3" strokeWidth={2} />
-                        View
-                      </button>
-                    </div>
                   </td>
                 </tr>
               );
