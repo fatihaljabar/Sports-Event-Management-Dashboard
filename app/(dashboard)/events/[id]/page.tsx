@@ -16,5 +16,9 @@ export default function EventDetailPage() {
     }
   };
 
-  return <KeyManagementPage onBack={handleBack} eventId={eventId} />;
+  const handleNavigateToEvents = () => {
+    router.push("/events");
+  };
+
+  return <KeyManagementPage onBack={handleBack} onNavigateToEvents={handleNavigateToEvents} eventId={eventId} />;
 }

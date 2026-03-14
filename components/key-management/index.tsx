@@ -13,13 +13,14 @@ import { GenerateKeysModal } from "./components/GenerateKeysModal";
 ───────────────────────────────────────────── */
 export interface KeyManagementPageProps {
   onBack: () => void;
+  onNavigateToEvents: () => void;
   eventId?: string;
 }
 
 // Re-export types for convenience
 export type { KeyStatus, SportKey } from "./constants";
 
-export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
+export function KeyManagementPage({ onBack, onNavigateToEvents, eventId }: KeyManagementPageProps) {
   // Custom hook for keys data and operations
   const {
     event,
@@ -72,6 +73,7 @@ export function KeyManagementPage({ onBack, eventId }: KeyManagementPageProps) {
           generated={generated}
           confirmed={confirmed}
           onBack={onBack}
+          onNavigateToEvents={onNavigateToEvents}
           onGenerateKeys={() => setShowGenerateModal(true)}
           isReadOnly={isReadOnly}
         />

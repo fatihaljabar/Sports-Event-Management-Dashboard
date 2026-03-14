@@ -29,6 +29,7 @@ interface KeyManagementHeaderProps {
   generated: number;
   confirmed: number;
   onBack: () => void;
+  onNavigateToEvents: () => void;
   onGenerateKeys: () => void;
   isReadOnly?: boolean;
 }
@@ -40,6 +41,7 @@ export function KeyManagementHeader({
   generated,
   confirmed,
   onBack,
+  onNavigateToEvents,
   onGenerateKeys,
   isReadOnly = false,
 }: KeyManagementHeaderProps) {
@@ -90,7 +92,7 @@ export function KeyManagementHeader({
             <span
               className="cursor-pointer transition-colors"
               style={{ color: "#94A3B8" }}
-              onClick={onBack}
+              onClick={onNavigateToEvents}
               onMouseEnter={(e) => ((e.currentTarget as HTMLSpanElement).style.color = "#2563EB")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLSpanElement).style.color = "#94A3B8")}
             >
