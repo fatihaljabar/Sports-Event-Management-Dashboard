@@ -12,7 +12,6 @@ interface ConvertedEvent {
   location: string;
   country: string;
   sport: string;
-  sportEmoji: string;
   sports: SportCategory[];
   date: string;
   startDate: string;
@@ -108,7 +107,6 @@ export function EventsTable() {
         location: city,
         country,
         sport: event.sports[0]?.label || "Multi-sport",
-        sportEmoji: event.sports[0]?.emoji || "🏆",
         sports: event.sports,
         date: dateStr,
         startDate: event.startDate,

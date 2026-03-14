@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useKeyManagement } from "./hooks/use-key-management";
 import { usePagination } from "./hooks/use-pagination";
 import { getCalculatedStatus } from "./utils";
