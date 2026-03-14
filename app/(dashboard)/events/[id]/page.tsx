@@ -9,7 +9,11 @@ export default function EventDetailPage() {
   const eventId = params.id as string;
 
   const handleBack = () => {
-    router.push("/events");
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/events");
+    }
   };
 
   return <KeyManagementPage onBack={handleBack} eventId={eventId} />;
