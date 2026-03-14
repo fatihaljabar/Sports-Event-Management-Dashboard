@@ -15,6 +15,8 @@ interface ConvertedEvent {
   sportEmoji: string;
   sports: SportCategory[];
   date: string;
+  startDate: string;
+  endDate: string;
   status: EventStatus;
   athletes: number;
   sponsorLogos?: SponsorLogoData[];
@@ -109,6 +111,8 @@ export function EventsTable() {
         sportEmoji: event.sports[0]?.emoji || "🏆",
         sports: event.sports,
         date: dateStr,
+        startDate: event.startDate,
+        endDate: event.endDate,
         status,
         athletes: event.maxParticipants,
         sponsorLogos: event.sponsorLogos,
@@ -116,7 +120,7 @@ export function EventsTable() {
     });
   }, [events]);
 
-  // Apply search and filter
+  // Apply search, filter, and sort
   const filtered = useMemo(() => {
     let result = convertedEvents;
 
@@ -137,13 +141,60 @@ export function EventsTable() {
       );
     }
 
-    return result;
-  }, [convertedEvents, activeFilter, searchQuery]);
+    // Apply sorting
+    if (sortCol) {
+      result = [...result].sort((a, b) => {
+        let aVal: string | number = "";
+        let bVal: string | number = "";
 
-  // Reset to page 1 when filter or search changes
+        switch (sortCol) {
+          case "name":
+            aVal = a.name.toLowerCase();
+            bVal = b.name.toLowerCase();
+            break;
+          case "location":
+            aVal = a.location.toLowerCase();
+            bVal = b.location.toLowerCase();
+            break;
+          case "sport":
+            aVal = a.sport.toLowerCase();
+            bVal = b.sport.toLowerCase();
+            break;
+          case "date":
+            // Sort by start date
+            aVal = new Date(a.startDate).getTime();
+            bVal = new Date(b.startDate).getTime();
+            break;
+          case "athletes":
+            aVal = a.athletes;
+            bVal = b.athletes;
+            break;
+          case "status":
+            aVal = a.status;
+            bVal = b.status;
+            break;
+          case "sponsors":
+            // Sort by number of sponsors
+            aVal = a.sponsorLogos?.length || 0;
+            bVal = b.sponsorLogos?.length || 0;
+            break;
+          default:
+            return 0;
+        }
+
+        if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [convertedEvents, activeFilter, searchQuery, sortCol, sortDir]);
+
+  // Reset to page 1 when filter, search, or sort changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, sortCol, sortDir]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
