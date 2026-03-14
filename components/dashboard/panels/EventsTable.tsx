@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { MapPin, Search, Filter, ChevronUp, ChevronDown } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
 import type { SponsorLogoData, SportCategory } from "@/lib/types/event";
@@ -56,6 +57,7 @@ function SearchInput({ value, onChange }: { value: string; onChange: (v: string)
 }
 
 export function EventsTable() {
+  const router = useRouter();
   const { events } = useEvents();
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,7 +68,7 @@ export function EventsTable() {
   const itemsPerPage = 10;
 
   // Filter tabs that can be shown/hidden
-  const availableFilters = ["All", "Active", "Upcoming", "Scheduled", "Completed"];
+  const availableFilters = ["All", "Active", "Upcoming", "Completed"];
 
   // Convert events from database to the format expected by this component
   const convertedEvents = useMemo(() => {
@@ -316,7 +318,6 @@ export function EventsTable() {
               key={tab}
               onClick={() => {
                 setActiveFilter(tab);
-                setShowFilter(false);
               }}
               className="rounded-lg px-3 py-1 transition-all"
               style={{
@@ -404,10 +405,11 @@ export function EventsTable() {
               return (
                 <tr
                   key={event.id}
-                  className="transition-colors"
+                  className="transition-colors cursor-pointer"
                   style={{
                     backgroundColor: isEven ? "#FFFFFF" : "#FAFBFC",
                   }}
+                  onClick={() => router.push(`/events/${event.id}`)}
                   onMouseEnter={(e) =>
                     ((e.currentTarget as HTMLTableRowElement).style.backgroundColor =
                       "#F0F7FF")
