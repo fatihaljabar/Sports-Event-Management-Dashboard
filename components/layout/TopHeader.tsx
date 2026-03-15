@@ -330,7 +330,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
               {/* Dropdown Footer */}
               <div
                 className="px-4 py-3 flex justify-center"
-                style={{ borderTop: "1px solid #F1F5F9" }}
+                style={{ borderTop: "1px solid #F1F5F9", paddingBottom: "16px" }}
               >
                 <button
                   style={{
