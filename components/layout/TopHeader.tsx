@@ -244,7 +244,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
               </div>
 
               {/* Notification List */}
-              <div className="overflow-y-auto" style={{ maxHeight: "400px" }}>
+              <div className="overflow-y-auto" style={{ maxHeight: "380px" }}>
                 {notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center">
                     <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: "#CBD5E1" }} />
