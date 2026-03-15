@@ -199,7 +199,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
               style={{
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E2E8F0",
-                width: "360px",
+                width: "400px",
                 maxHeight: "480px",
                 overflow: "hidden",
               }}
@@ -333,15 +333,16 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
                 style={{ borderTop: "1px solid #F1F5F9" }}
               >
                 <button
-                  className="w-full flex justify-center rounded-lg py-2 transition-colors"
+                  className="w-full block text-center rounded-lg py-2 transition-colors"
                   style={{
                     color: "#2563EB",
-                    fontSize: "0.75rem",
+                    fontSize: "0.8rem",
                     fontWeight: 500,
                     fontFamily: '"Inter", sans-serif',
                     backgroundColor: "transparent",
                     border: "none",
                     cursor: "pointer",
+                    textAlign: "center",
                   }}
                   onMouseEnter={(e) =>
                     ((e.currentTarget as HTMLButtonElement).style.color = "#1D4ED8")
