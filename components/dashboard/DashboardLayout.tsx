@@ -21,7 +21,6 @@ export function DashboardLayout() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Dashboard sync - tracks last data fetch time from server
   const { lastSyncTime } = useDashboardSync();
@@ -48,8 +47,7 @@ export function DashboardLayout() {
   };
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    // For now, navigate to events page with query
+    // Navigate to events page with query
     if (query.trim()) {
       router.push(`/events?search=${encodeURIComponent(query)}`);
     }
