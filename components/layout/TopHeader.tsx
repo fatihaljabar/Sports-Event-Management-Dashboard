@@ -200,8 +200,8 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E2E8F0",
                 width: "380px",
-                maxHeight: "480px",
-                overflow: "visible",
+                maxHeight: "491px",
+                overflow: "hidden",
               }}
             >
               {/* Dropdown Header */}
