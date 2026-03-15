@@ -1,6 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Bell, Plus, ChevronRight, Home, Calendar, Key, Users, Trophy } from "lucide-react";
 import { useNotification, NotificationItem } from "@/components/contexts/NotificationContext";
+
+// Get notification icon based on type - moved outside component for performance
+const getNotificationIcon = (type: NotificationItem["type"]) => {
+  switch (type) {
+    case "event":
+      return <Calendar className="w-4 h-4" style={{ color: "#2563EB" }} />;
+    case "key":
+      return <Key className="w-4 h-4" style={{ color: "#7C3AED" }} />;
+    case "participant":
+      return <Users className="w-4 h-4" style={{ color: "#059669" }} />;
+    case "result":
+      return <Trophy className="w-4 h-4" style={{ color: "#F59E0B" }} />;
+  }
+};
 
 export interface BreadcrumbItem {
   label: string;
@@ -15,15 +30,13 @@ interface TopHeaderProps {
 }
 
 export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderProps) {
+  const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Use NotificationContext
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
-
-  // Notification list from context
-  const notificationList = notifications;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -38,28 +51,14 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
   }, []);
 
   // Mark notification as read - use context function
-  const handleMarkAsRead = (id: string) => {
+  const handleMarkAsRead = useCallback((id: string) => {
     markAsRead(id);
-  };
+  }, [markAsRead]);
 
   // Mark all as read - use context function
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = useCallback(() => {
     markAllAsRead();
-  };
-
-  // Get notification icon based on type
-  const getNotificationIcon = (type: NotificationItem["type"]) => {
-    switch (type) {
-      case "event":
-        return <Calendar className="w-4 h-4" style={{ color: "#2563EB" }} />;
-      case "key":
-        return <Key className="w-4 h-4" style={{ color: "#7C3AED" }} />;
-      case "participant":
-        return <Users className="w-4 h-4" style={{ color: "#059669" }} />;
-      case "result":
-        return <Trophy className="w-4 h-4" style={{ color: "#F59E0B" }} />;
-    }
-  };
+  }, [markAllAsRead]);
 
   // Default breadcrumbs for dashboard home
   const defaultBreadcrumbs: BreadcrumbItem[] = [
@@ -69,19 +68,19 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
 
   const breadcrumbList = breadcrumbs && breadcrumbs.length > 0 ? breadcrumbs : defaultBreadcrumbs;
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && onSearch) {
       onSearch(searchValue);
     }
-  };
+  }, [onSearch, searchValue]);
 
-  const handleBreadcrumbClick = (item: BreadcrumbItem, index: number) => {
+  const handleBreadcrumbClick = useCallback((item: BreadcrumbItem, index: number) => {
     // Don't navigate if it's the last item (current page) or not clickable
     if (index === breadcrumbList.length - 1 || !item.isClickable || !item.href) {
       return;
     }
-    window.location.href = item.href;
-  };
+    router.push(item.href);
+  }, [router, breadcrumbs]);
 
   return (
     <header
@@ -256,13 +255,13 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
 
               {/* Notification List */}
               <div className="overflow-y-auto" style={{ maxHeight: "400px" }}>
-                {notificationList.length === 0 ? (
+                {notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center">
                     <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: "#CBD5E1" }} />
                     <p style={{ color: "#94A3B8", fontSize: "0.8rem" }}>No notifications</p>
                   </div>
                 ) : (
-                  notificationList.map((notification) => (
+                  notifications.map((notification) => (
                     <div
                       key={notification.id}
                       className="flex gap-3 px-4 py-3 transition-colors cursor-pointer"
