@@ -199,7 +199,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
               style={{
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E2E8F0",
-                width: "360px",
+                width: "380px",
                 maxHeight: "480px",
                 overflow: "hidden",
               }}
