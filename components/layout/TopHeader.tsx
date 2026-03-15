@@ -329,10 +329,11 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
 
               {/* Dropdown Footer */}
               <div
-                className="px-4 py-3 flex justify-center"
+                className="px-4 py-3"
                 style={{ borderTop: "1px solid #F1F5F9" }}
               >
                 <button
+                  className="w-full flex justify-center rounded-lg py-2 transition-colors"
                   style={{
                     color: "#2563EB",
                     fontSize: "0.75rem",
@@ -341,7 +342,6 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
                     backgroundColor: "transparent",
                     border: "none",
                     cursor: "pointer",
-                    whiteSpace: "nowrap",
                   }}
                   onMouseEnter={(e) =>
                     ((e.currentTarget as HTMLButtonElement).style.color = "#1D4ED8")
