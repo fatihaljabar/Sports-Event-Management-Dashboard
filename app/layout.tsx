@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Barlow_Condensed, JetBrains_Mono } from "next/font/google";
 import { EventProvider } from "@/lib/stores/event-store";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { NotificationProvider } from "@/components/contexts/NotificationContext";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -39,7 +40,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable}`}>
         <QueryProvider>
-          <EventProvider>{children}</EventProvider>
+          <NotificationProvider>
+            <EventProvider>{children}</EventProvider>
+          </NotificationProvider>
         </QueryProvider>
         <Toaster />
       </body>

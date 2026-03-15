@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldOff, RotateCcw, Trash2 } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
+import { useNotification } from "@/components/contexts/NotificationContext";
 import { getKeysByEvent, revokeKey, restoreKey, deleteKey } from "@/app/actions/keys";
 import { toast } from "sonner";
 import type { KeyStatus, SportKey } from "../constants";
@@ -37,6 +38,7 @@ export function useKeyManagement(eventId: string | undefined) {
   const { getEventById, isLoading, refreshEvents } = useEvents();
   const queryClient = useQueryClient();
   const event = eventId ? getEventById(eventId) : null;
+  const { addNotification } = useNotification();
 
   // Track if initial load is complete
   const isInitialLoad = useRef(true);
@@ -195,6 +197,11 @@ export function useKeyManagement(eventId: string | undefined) {
           icon: <Trash2 className="w-5 h-5" />,
           className: "delete-toast",
         });
+        addNotification({
+          type: "key",
+          title: "Key Deleted",
+          message: "The access key has been permanently deleted.",
+        });
       } else {
         // Revert by restoring previous data
         queryClient.setQueryData(
@@ -215,7 +222,7 @@ export function useKeyManagement(eventId: string | undefined) {
         description: error instanceof Error ? error.message : "Please try again.",
       });
     }
-  }, [keys, event?.id, queryClient, refreshEvents, refetchKeys]);
+  }, [keys, event?.id, queryClient, refreshEvents, refetchKeys, addNotification]);
 
   // ═══════════════════════════════════════════════════════════════
   // FILTERING & STATS

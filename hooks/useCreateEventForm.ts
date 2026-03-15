@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useEvents } from "@/lib/stores/event-store";
+import { useNotification } from "@/components/contexts/NotificationContext";
 import { getTimezoneByLocation, getSportsByIds } from "@/lib/utils/create-event-helpers";
 import { validateCreateEventData, clearError } from "@/lib/utils/create-event-validation";
 import { createEvent } from "@/app/actions/events";
@@ -14,6 +15,7 @@ export interface UseCreateEventFormProps {
 
 export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
   const { addEvent } = useEvents();
+  const { addNotification } = useNotification();
 
   // Form state
   const [eventName, setEventName] = useState("");
@@ -176,6 +178,12 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
         toast.success("Event created successfully", {
           description: `"${eventName}" has been added to your events.`,
         });
+        // Add notification
+        addNotification({
+          type: "event",
+          title: "Event Created",
+          message: `"${eventName}" has been created successfully.`,
+        });
         onClose();
       } else {
         // Show server error
@@ -192,7 +200,7 @@ export function useCreateEventForm({ onClose }: UseCreateEventFormProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, visibility, eventLogo, sponsorLogos, addEvent, onClose, validateForm]);
+  }, [eventName, eventType, selectedSports, location, timezone, startDate, endDate, visibility, eventLogo, sponsorLogos, addEvent, addNotification, onClose, validateForm]);
 
   // Reset form
   const resetForm = useCallback(() => {

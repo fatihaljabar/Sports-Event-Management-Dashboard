@@ -1,9 +1,8 @@
 "use client";
 
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo } from "react";
 import { Calendar, Users, Award, KeyRound, TrendingUp, TrendingDown } from "lucide-react";
-import { getActiveEventsCount } from "@/app/actions/events";
+import { useEvents } from "@/lib/stores/event-store";
 
 interface CardData {
   label: string;
@@ -17,14 +16,29 @@ interface CardData {
 }
 
 function useActiveEventsCount() {
-  return useQuery({
-    queryKey: ["active-events-count"],
-    queryFn: async () => {
-      const count = await getActiveEventsCount();
-      return count;
-    },
-    staleTime: 60000, // 1 minute
-  });
+  const { events } = useEvents();
+
+  const activeEventsCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return events.filter((event) => {
+      // Active = status is active/upcoming and dates are valid
+      if (event.status === "archived") return false;
+      if (event.status === "completed") return false;
+
+      const startDate = new Date(event.startDate);
+      const endDate = new Date(event.endDate);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+
+      // Event is active if today is between start and end dates
+      // or if it's upcoming (today < startDate)
+      return today >= startDate && today <= endDate;
+    }).length;
+  }, [events]);
+
+  return { count: activeEventsCount };
 }
 
 const cards: CardData[] = [
@@ -71,7 +85,7 @@ const cards: CardData[] = [
 ];
 
 export function ScoreboardCards() {
-  const { data: activeEventsCount = 0 } = useActiveEventsCount();
+  const { count: activeEventsCount = 0 } = useActiveEventsCount();
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

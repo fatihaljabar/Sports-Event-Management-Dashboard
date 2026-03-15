@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Archive, Copy, Package, Trash2 } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
+import { useNotification } from "@/components/contexts/NotificationContext";
 import { toast } from "sonner";
 import {
   deleteEvent as deleteEventAction,
@@ -32,6 +34,8 @@ export function useEventManagement() {
     duplicateEvent: duplicateEventInStore,
     refreshEvents,
   } = useEvents();
+  const { addNotification } = useNotification();
+  const queryClient = useQueryClient();
 
   // State
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
@@ -284,6 +288,11 @@ export function useEventManagement() {
             icon: <Trash2 className="w-5 h-5" />,
             className: "delete-toast",
           });
+          addNotification({
+            type: "event",
+            title: "Event Deleted",
+            message: `"${eventName}" has been deleted.`,
+          });
         } else {
           toast.error("Failed to delete event", {
             description: result.error || "Please try again.",
@@ -298,7 +307,7 @@ export function useEventManagement() {
         setIsDeleting(false);
       }
     },
-    [deleteEventFromStore],
+    [deleteEventFromStore, addNotification],
   );
 
   const handleEditEvent = useCallback(
@@ -318,10 +327,17 @@ export function useEventManagement() {
           const result = await unarchiveEventAction(eventId);
           if (result.success) {
             await refreshEvents();
+            // Invalidate active events count query to update dashboard
+            queryClient.invalidateQueries({ queryKey: ["active-events-count"] });
             toast("Event restored successfully", {
               description: `"${eventName}" has been restored.`,
               icon: <Package className="w-5 h-5" />,
               className: "unarchive-toast",
+            });
+            addNotification({
+              type: "event",
+              title: "Event Restored",
+              message: `"${eventName}" has been restored.`,
             });
           } else {
             toast.error("Failed to restore event", {
@@ -332,10 +348,17 @@ export function useEventManagement() {
           const result = await archiveEventAction(eventId);
           if (result.success) {
             archiveEventInStore(eventId);
+            // Invalidate active events count query to update dashboard
+            queryClient.invalidateQueries({ queryKey: ["active-events-count"] });
             toast("Event archived", {
               description: `"${eventName}" has been archived.`,
               icon: <Archive className="w-5 h-5" />,
               className: "archive-toast",
+            });
+            addNotification({
+              type: "event",
+              title: "Event Archived",
+              message: `"${eventName}" has been archived.`,
             });
           } else {
             toast.error("Failed to archive event", {
@@ -350,7 +373,7 @@ export function useEventManagement() {
         });
       }
     },
-    [archiveEventInStore, refreshEvents],
+    [archiveEventInStore, refreshEvents, addNotification, queryClient],
   );
 
   const handleDuplicateEvent = useCallback(
@@ -364,6 +387,11 @@ export function useEventManagement() {
             icon: <Copy className="w-5 h-5" />,
             className: "duplicate-toast",
           });
+          addNotification({
+            type: "event",
+            title: "Event Duplicated",
+            message: `A copy of "${result.event.name}" has been created.`,
+          });
         } else {
           toast.error("Failed to duplicate event", {
             description: result.error || "Please try again.",
@@ -376,7 +404,7 @@ export function useEventManagement() {
         });
       }
     },
-    [duplicateEventInStore],
+    [duplicateEventInStore, addNotification],
   );
 
   const handleExportEvent = useCallback(

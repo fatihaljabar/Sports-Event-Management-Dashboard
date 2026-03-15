@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { X, Hash, RefreshCw, Zap, Check, AlertCircle, Archive } from "lucide-react";
 import { generateKeys } from "@/app/actions/keys";
+import { useNotification } from "@/components/contexts/NotificationContext";
 import { toast } from "sonner";
 import type { SportCategory } from "@/lib/types/event";
 
@@ -31,6 +32,8 @@ export function GenerateKeysModal({
   remainingQuota = 0,
   totalQuota = 0,
 }: GenerateKeysModalProps) {
+  const { addNotification } = useNotification();
+
   // Convert SportCategory[] to AvailableSport[] format
   const availableSports: AvailableSport[] = eventSports && eventSports.length > 0
     ? eventSports.map((s) => ({ name: s.label, emoji: s.emoji, id: s.id }))
@@ -67,9 +70,19 @@ export function GenerateKeysModal({
             className: "archive-toast",
             icon: <Archive className="w-5 h-5" style={{ color: "#D97706" }} />,
           });
+          addNotification({
+            type: "key",
+            title: "Keys Generated (Warning)",
+            message: result.warning || `${qty} keys generated with warning.`,
+          });
         } else {
           toast.success("Keys generated successfully", {
             description: `${qty} access keys have been created.`,
+          });
+          addNotification({
+            type: "key",
+            title: "Keys Generated",
+            message: `${qty} access keys have been created.`,
           });
         }
         setTimeout(() => onClose(), 1200);
