@@ -55,12 +55,35 @@ export function DashboardLayout() {
     }
   };
 
-  const handleHomeClick = () => {
-    router.push("/");
-  };
-
-  const handleDashboardClick = () => {
-    router.push("/");
+  // Generate breadcrumbs based on active navigation
+  const getBreadcrumbs = () => {
+    switch (activeNav) {
+      case "events":
+        return [
+          { label: "Home", href: "/", isClickable: true },
+          { label: "Events", href: "/events", isClickable: true },
+        ];
+      case "participants":
+        return [
+          { label: "Home", href: "/", isClickable: true },
+          { label: "Participants", href: "/participants", isClickable: true },
+        ];
+      case "results":
+        return [
+          { label: "Home", href: "/", isClickable: true },
+          { label: "Results", href: "/results", isClickable: true },
+        ];
+      case "medals":
+        return [
+          { label: "Home", href: "/", isClickable: true },
+          { label: "Medals", href: "/medals", isClickable: true },
+        ];
+      default:
+        return [
+          { label: "Home", href: "/", isClickable: true },
+          { label: "Dashboard", href: "/", isClickable: true },
+        ];
+    }
   };
 
   return (
@@ -80,8 +103,7 @@ export function DashboardLayout() {
         <TopHeader
           onCreateEvent={() => setShowCreateModal(true)}
           onSearch={handleSearch}
-          onHomeClick={handleHomeClick}
-          onDashboardClick={handleDashboardClick}
+          breadcrumbs={getBreadcrumbs()}
         />
 
         {/* Page Content */}

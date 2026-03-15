@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { EventManagementPage } from "@/components/event-management";
 import { CreateEventModal } from "@/components/CreateEventModal";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function EventsPage() {
+function EventsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -31,5 +31,13 @@ export default function EventsPage() {
         <CreateEventModal onClose={() => setShowCreateModal(false)} />
       )}
     </>
+  );
+}
+
+export default function EventsPage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center">Loading...</div>}>
+      <EventsPageContent />
+    </Suspense>
   );
 }

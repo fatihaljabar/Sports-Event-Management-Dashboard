@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { TopHeader } from "@/components/layout/TopHeader";
+import { TopHeader, BreadcrumbItem } from "@/components/layout/TopHeader";
 import { CreateEventModal } from "@/components/CreateEventModal";
 
 export function DashboardLayoutWrapper({
@@ -26,6 +26,69 @@ export function DashboardLayoutWrapper({
   };
 
   const activeNav = getActiveNav();
+
+  // Generate breadcrumbs based on current pathname
+  const getBreadcrumbs = (): BreadcrumbItem[] => {
+    const path = pathname;
+
+    // Root/Dashboard
+    if (path === "/") {
+      return [
+        { label: "Home", href: "/", isClickable: true },
+        { label: "Dashboard", href: "/", isClickable: true },
+      ];
+    }
+
+    // Events list - /events
+    if (path === "/events") {
+      return [
+        { label: "Home", href: "/", isClickable: true },
+        { label: "Events", href: "/events", isClickable: true },
+      ];
+    }
+
+    // Event detail - /events/[id]
+    if (path.startsWith("/events/") && path.split("/").length > 2) {
+      const eventId = path.split("/")[2];
+      return [
+        { label: "Home", href: "/", isClickable: true },
+        { label: "Events", href: "/events", isClickable: true },
+        { label: "Event Details", href: path, isClickable: false },
+      ];
+    }
+
+    // Participants
+    if (path === "/participants") {
+      return [
+        { label: "Home", href: "/", isClickable: true },
+        { label: "Participants", href: "/participants", isClickable: true },
+      ];
+    }
+
+    // Results
+    if (path === "/results") {
+      return [
+        { label: "Home", href: "/", isClickable: true },
+        { label: "Results", href: "/results", isClickable: true },
+      ];
+    }
+
+    // Medals
+    if (path === "/medals") {
+      return [
+        { label: "Home", href: "/", isClickable: true },
+        { label: "Medals", href: "/medals", isClickable: true },
+      ];
+    }
+
+    // Default
+    return [
+      { label: "Home", href: "/", isClickable: true },
+      { label: "Dashboard", href: "/", isClickable: true },
+    ];
+  };
+
+  const breadcrumbs = getBreadcrumbs();
 
   const handleNavChange = (id: string) => {
     // Navigate to the appropriate route using Next.js router
@@ -58,7 +121,10 @@ export function DashboardLayoutWrapper({
     >
       <Sidebar activeNav={activeNav} onNavChange={handleNavChange} />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopHeader onCreateEvent={() => setShowCreateModal(true)} />
+        <TopHeader
+          onCreateEvent={() => setShowCreateModal(true)}
+          breadcrumbs={breadcrumbs}
+        />
         {children}
       </div>
       {showCreateModal && (
