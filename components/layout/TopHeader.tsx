@@ -201,7 +201,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
                 border: "1px solid #E2E8F0",
                 width: "380px",
                 maxHeight: "480px",
-                overflow: "hidden",
+                overflow: "visible",
               }}
             >
               {/* Dropdown Header */}
@@ -330,7 +330,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
               {/* Dropdown Footer */}
               <div
                 className="px-4 py-3 flex justify-center"
-                style={{ borderTop: "1px solid #F1F5F9", paddingBottom: "16px" }}
+                style={{ borderTop: "1px solid #F1F5F9" }}
               >
                 <button
                   style={{
