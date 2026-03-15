@@ -50,16 +50,6 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Mark notification as read - use context function
-  const handleMarkAsRead = useCallback((id: string) => {
-    markAsRead(id);
-  }, [markAsRead]);
-
-  // Mark all as read - use context function
-  const handleMarkAllAsRead = useCallback(() => {
-    markAllAsRead();
-  }, [markAllAsRead]);
-
   // Default breadcrumbs for dashboard home
   const defaultBreadcrumbs: BreadcrumbItem[] = [
     { label: "Home", href: "/", isClickable: true },
@@ -231,7 +221,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
                 </span>
                 {unreadCount > 0 && (
                   <button
-                    onClick={handleMarkAllAsRead}
+                    onClick={markAllAsRead}
                     style={{
                       color: "#2563EB",
                       fontSize: "0.75rem",
@@ -269,7 +259,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
                         backgroundColor: notification.isRead ? "#FFFFFF" : "#F8FAFC",
                         borderBottom: "1px solid #F8FAFC",
                       }}
-                      onClick={() => handleMarkAsRead(notification.id)}
+                      onClick={() => markAsRead(notification.id)}
                       onMouseEnter={(e) =>
                         ((e.currentTarget as HTMLDivElement).style.backgroundColor = "#F8FAFC")
                       }
