@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Plus, ArrowUpDown, ChevronDown, Search, SlidersHorizontal, CheckCircle2, X } from "lucide-react";
 import { EditEventModal } from "./EditEventModal";
 import { TABS, SORT_OPTIONS, EVENT_TYPE_OPTIONS } from "./constants";
@@ -7,9 +8,10 @@ import { EventTable } from "./EventTable";
 interface EventManagementPageProps {
   onCreateEvent: () => void;
   onEventClick: (eventId: string) => void;
+  initialSearch?: string;
 }
 
-export function EventManagementPage({ onCreateEvent, onEventClick }: EventManagementPageProps) {
+export function EventManagementPage({ onCreateEvent, onEventClick, initialSearch = "" }: EventManagementPageProps) {
   const {
     activeTab,
     setActiveTab,
@@ -51,6 +53,13 @@ export function EventManagementPage({ onCreateEvent, onEventClick }: EventManage
     handleClearFilters,
     refreshEvents,
   } = useEventManagement();
+
+  // Set initial search from URL params
+  useEffect(() => {
+    if (initialSearch) {
+      setSearch(initialSearch);
+    }
+  }, [initialSearch, setSearch]);
 
   const handlers = {
     onEventClick,

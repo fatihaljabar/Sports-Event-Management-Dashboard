@@ -1,13 +1,22 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Search, Bell, Plus, ChevronRight, Home } from "lucide-react";
 
 interface TopHeaderProps {
   onCreateEvent: () => void;
+  onSearch?: (query: string) => void;
+  onHomeClick?: () => void;
+  onDashboardClick?: () => void;
 }
 
-export function TopHeader({ onCreateEvent }: TopHeaderProps) {
+export function TopHeader({ onCreateEvent, onSearch, onHomeClick, onDashboardClick }: TopHeaderProps) {
   const [notifications] = useState(4);
   const [searchValue, setSearchValue] = useState("");
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && onSearch) {
+      onSearch(searchValue);
+    }
+  };
 
   return (
     <header
@@ -21,25 +30,34 @@ export function TopHeader({ onCreateEvent }: TopHeaderProps) {
     >
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 flex-shrink-0">
-        <Home className="w-3.5 h-3.5" style={{ color: "#94A3B8" }} strokeWidth={1.75} />
+        <Home
+          className="w-3.5 h-3.5 cursor-pointer"
+          style={{ color: "#94A3B8" }}
+          strokeWidth={1.75}
+          onClick={onHomeClick}
+        />
         <ChevronRight className="w-3 h-3" style={{ color: "#CBD5E1" }} strokeWidth={2} />
         <span
+          className="cursor-pointer"
           style={{
             color: "#94A3B8",
             fontSize: "0.8rem",
             fontFamily: '"Inter", sans-serif',
           }}
+          onClick={onHomeClick}
         >
           Home
         </span>
         <ChevronRight className="w-3 h-3" style={{ color: "#CBD5E1" }} strokeWidth={2} />
         <span
+          className="cursor-pointer"
           style={{
             color: "#1E293B",
             fontSize: "0.8rem",
             fontWeight: 500,
             fontFamily: '"Inter", sans-serif',
           }}
+          onClick={onDashboardClick}
         >
           Dashboard
         </span>
@@ -61,6 +79,7 @@ export function TopHeader({ onCreateEvent }: TopHeaderProps) {
             placeholder="Search athletes, events, keys…"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             className="w-full rounded-lg outline-none transition-all"
             style={{
               paddingLeft: "2.25rem",

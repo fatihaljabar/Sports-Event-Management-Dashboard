@@ -21,6 +21,7 @@ export function DashboardLayout() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Dashboard sync - tracks last data fetch time from server
   const { lastSyncTime } = useDashboardSync();
@@ -46,6 +47,22 @@ export function DashboardLayout() {
     setActiveNav(id);
   };
 
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    // For now, navigate to events page with query
+    if (query.trim()) {
+      router.push(`/events?search=${encodeURIComponent(query)}`);
+    }
+  };
+
+  const handleHomeClick = () => {
+    router.push("/");
+  };
+
+  const handleDashboardClick = () => {
+    router.push("/");
+  };
+
   return (
     <div
       className="flex h-screen overflow-hidden"
@@ -60,7 +77,12 @@ export function DashboardLayout() {
       {/* Main Area */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Top Header */}
-        <TopHeader onCreateEvent={() => setShowCreateModal(true)} />
+        <TopHeader
+          onCreateEvent={() => setShowCreateModal(true)}
+          onSearch={handleSearch}
+          onHomeClick={handleHomeClick}
+          onDashboardClick={handleDashboardClick}
+        />
 
         {/* Page Content */}
         {activeNav === "participants" ? (
