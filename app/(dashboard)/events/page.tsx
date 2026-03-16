@@ -20,12 +20,18 @@ function EventsPageContent() {
     router.push(`/events/${eventId}`);
   };
 
+  const handleSearchClear = () => {
+    // Navigate to /events without search param to clear URL
+    router.push("/events");
+  };
+
   return (
     <>
       <EventManagementPage
         onCreateEvent={handleCreateEvent}
         onEventClick={handleEventClick}
         initialSearch={initialSearch}
+        onSearchClear={handleSearchClear}
       />
       {showCreateModal && (
         <CreateEventModal onClose={() => setShowCreateModal(false)} />

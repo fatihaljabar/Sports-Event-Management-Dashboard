@@ -9,9 +9,10 @@ interface EventManagementPageProps {
   onCreateEvent: () => void;
   onEventClick: (eventId: string) => void;
   initialSearch?: string;
+  onSearchClear?: () => void;
 }
 
-export function EventManagementPage({ onCreateEvent, onEventClick, initialSearch = "" }: EventManagementPageProps) {
+export function EventManagementPage({ onCreateEvent, onEventClick, initialSearch = "", onSearchClear }: EventManagementPageProps) {
   const {
     activeTab,
     setActiveTab,
@@ -472,7 +473,12 @@ export function EventManagementPage({ onCreateEvent, onEventClick, initialSearch
                 />
                 {search && (
                   <button
-                    onClick={() => setSearch("")}
+                    onClick={() => {
+                      setSearch("");
+                      if (onSearchClear) {
+                        onSearchClear();
+                      }
+                    }}
                     className="absolute right-3 flex items-center justify-center transition-colors"
                     style={{
                       width: "18px",

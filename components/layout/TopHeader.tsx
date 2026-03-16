@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, Bell, Plus, ChevronRight, Home, Calendar, Key, Users, Trophy, X } from "lucide-react";
 import { useNotification, NotificationItem } from "@/components/contexts/NotificationContext";
 
@@ -31,9 +31,20 @@ interface TopHeaderProps {
 
 export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync searchValue with URL search param when on events page
+  useEffect(() => {
+    // Only sync when on events page
+    if (pathname.startsWith("/events")) {
+      const urlSearch = searchParams?.get("search") || "";
+      setSearchValue(urlSearch);
+    }
+  }, [pathname, searchParams]);
 
   // Use NotificationContext
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
