@@ -455,7 +455,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick, initialSearch
                   className="w-full rounded-lg outline-none transition-all"
                   style={{
                     paddingLeft: "2rem",
-                    paddingRight: "0.75rem",
+                    paddingRight: search ? "2rem" : "0.75rem",
                     paddingTop: "0.45rem",
                     paddingBottom: "0.45rem",
                     backgroundColor: "#F8FAFC",
@@ -470,6 +470,25 @@ export function EventManagementPage({ onCreateEvent, onEventClick, initialSearch
                     ((e.target as HTMLInputElement).style.borderColor = "#E2E8F0")
                   }
                 />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 flex items-center justify-center transition-colors"
+                    style={{
+                      width: "18px",
+                      height: "18px",
+                      color: "#94A3B8",
+                    }}
+                    onMouseEnter={(e) =>
+                      ((e.currentTarget as HTMLButtonElement).style.color = "#64748B")
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.currentTarget as HTMLButtonElement).style.color = "#94A3B8")
+                    }
+                  >
+                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  </button>
+                )}
               </div>
 
               <div ref={sortDropdownRef} className="relative">

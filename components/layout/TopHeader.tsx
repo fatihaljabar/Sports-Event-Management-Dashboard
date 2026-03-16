@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bell, Plus, ChevronRight, Home, Calendar, Key, Users, Trophy } from "lucide-react";
+import { Search, Bell, Plus, ChevronRight, Home, Calendar, Key, Users, Trophy, X } from "lucide-react";
 import { useNotification, NotificationItem } from "@/components/contexts/NotificationContext";
 
 // Get notification icon based on type - moved outside component for performance
@@ -139,7 +139,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
             className="w-full rounded-lg outline-none transition-all"
             style={{
               paddingLeft: "2.25rem",
-              paddingRight: "1rem",
+              paddingRight: searchValue ? "2rem" : "1rem",
               paddingTop: "0.5rem",
               paddingBottom: "0.5rem",
               backgroundColor: "#F8FAFC",
@@ -155,6 +155,30 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
               ((e.target as HTMLInputElement).style.borderColor = "#E2E8F0")
             }
           />
+          {searchValue && (
+            <button
+              onClick={() => {
+                setSearchValue("");
+                if (onSearch) {
+                  onSearch("");
+                }
+              }}
+              className="absolute right-3 flex items-center justify-center transition-colors"
+              style={{
+                width: "18px",
+                height: "18px",
+                color: "#94A3B8",
+              }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.color = "#64748B")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.color = "#94A3B8")
+              }
+            >
+              <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+            </button>
+          )}
         </div>
       </div>
 
