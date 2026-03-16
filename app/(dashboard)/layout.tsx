@@ -111,6 +111,16 @@ export function DashboardLayoutWrapper({
     }
   };
 
+  const handleSearch = (query: string) => {
+    // Navigate to events page with search query
+    if (query.trim()) {
+      router.push(`/events?search=${encodeURIComponent(query)}`);
+    } else {
+      // If query is empty, go to events page without search param
+      router.push("/events");
+    }
+  };
+
   return (
     <div
       className="flex h-screen overflow-hidden"
@@ -123,6 +133,7 @@ export function DashboardLayoutWrapper({
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <TopHeader
           onCreateEvent={() => setShowCreateModal(true)}
+          onSearch={handleSearch}
           breadcrumbs={breadcrumbs}
         />
         {children}
