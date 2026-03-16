@@ -169,16 +169,28 @@ export function useEventManagement() {
     });
   }, [events]);
 
-  // Tab counts
+  // Tab counts - now considers search filter to show filtered counts
   const tabCounts = useMemo(() => {
+    // First apply search filter to get events matching the search
+    let eventsToCount = convertedEvents;
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      eventsToCount = convertedEvents.filter(
+        (e) =>
+          e.name.toLowerCase().includes(searchLower) ||
+          e.id.toLowerCase().includes(searchLower) ||
+          e.location.toLowerCase().includes(searchLower),
+      );
+    }
+
     return {
-      all: convertedEvents.length,
-      active: convertedEvents.filter((e) => e.status === "active").length,
-      upcoming: convertedEvents.filter((e) => e.status === "upcoming").length,
-      completed: convertedEvents.filter((e) => e.status === "completed").length,
-      archived: convertedEvents.filter((e) => e.status === "archived").length,
+      all: eventsToCount.length,
+      active: eventsToCount.filter((e) => e.status === "active").length,
+      upcoming: eventsToCount.filter((e) => e.status === "upcoming").length,
+      completed: eventsToCount.filter((e) => e.status === "completed").length,
+      archived: eventsToCount.filter((e) => e.status === "archived").length,
     };
-  }, [convertedEvents]);
+  }, [convertedEvents, search]);
 
   // Filter and sort events
   const filtered = useMemo(() => {
