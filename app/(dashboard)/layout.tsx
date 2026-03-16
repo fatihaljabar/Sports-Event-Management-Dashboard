@@ -112,12 +112,27 @@ export function DashboardLayoutWrapper({
   };
 
   const handleSearch = (query: string) => {
-    // Navigate to events page with search query
-    if (query.trim()) {
-      router.push(`/events?search=${encodeURIComponent(query)}`);
-    } else {
-      // If query is empty, go to events page without search param
+    const trimmedQuery = query.trim();
+
+    // If query is empty, go to events page
+    if (!trimmedQuery) {
       router.push("/events");
+      return;
+    }
+
+    // Auto-detect: Check if query looks like an event ID (e.g., EVT-001, EVT-1)
+    // This also helps with keys since they reference events
+    const eventIdPattern = /^(EVT[-\s]?\d+)$/i;
+    const normalizedQuery = trimmedQuery.toUpperCase().replace(/\s+/g, "-");
+
+    if (eventIdPattern.test(normalizedQuery)) {
+      // Extract event ID (e.g., EVT-001 from EVT-001)
+      const eventId = normalizedQuery.replace(/^(EVT[-\s]?(\d+))$/i, "EVT-$2");
+      // Navigate directly to event detail page
+      router.push(`/events/${eventId}`);
+    } else {
+      // Default: search events page
+      router.push(`/events?search=${encodeURIComponent(trimmedQuery)}`);
     }
   };
 
