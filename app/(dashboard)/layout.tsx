@@ -49,7 +49,6 @@ export function DashboardLayoutWrapper({
 
     // Event detail - /events/[id]
     if (path.startsWith("/events/") && path.split("/").length > 2) {
-      const eventId = path.split("/")[2];
       return [
         { label: "Home", href: "/", isClickable: true },
         { label: "Events", href: "/events", isClickable: true },
