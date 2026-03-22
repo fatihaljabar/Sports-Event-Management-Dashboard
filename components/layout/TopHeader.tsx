@@ -47,22 +47,18 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
     }
   }, [pathname, searchParams]);
 
-  // Real-time search with debounce
+  // Search: clear URL when deleting, but only navigate on Enter
   const handleSearchChange = useCallback((value: string) => {
     setSearchValue(value);
 
-    // Debounce URL update to avoid excessive navigations
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      if (value.trim()) {
-        router.replace(`/events?search=${encodeURIComponent(value)}`);
-      } else {
-        router.replace("/events");
+    // If search is being cleared (backspace/delete), immediately clear URL
+    if (!value) {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
       }
-    }, 300);
+      router.replace("/events");
+    }
   }, [router]);
 
   // Use NotificationContext
