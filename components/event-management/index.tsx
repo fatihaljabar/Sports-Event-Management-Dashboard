@@ -57,9 +57,7 @@ export function EventManagementPage({ onCreateEvent, onEventClick, initialSearch
 
   // Set initial search from URL params
   useEffect(() => {
-    if (initialSearch) {
-      setSearch(initialSearch);
-    }
+    setSearch(initialSearch);
   }, [initialSearch, setSearch]);
 
   const handlers = {
