@@ -36,8 +36,9 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
   const [searchValue, setSearchValue] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync searchValue with URL search param when on events page
+  // Sync searchValue with URL search param when on events page (only on mount/navigation, not during typing)
   useEffect(() => {
     // Only sync when on events page
     if (pathname.startsWith("/events")) {
@@ -45,6 +46,24 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
       setSearchValue(urlSearch);
     }
   }, [pathname, searchParams]);
+
+  // Real-time search with debounce
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchValue(value);
+
+    // Debounce URL update to avoid excessive navigations
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      if (value.trim()) {
+        router.replace(`/events?search=${encodeURIComponent(value)}`);
+      } else {
+        router.replace("/events");
+      }
+    }, 300);
+  }, [router]);
 
   // Use NotificationContext
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
@@ -70,8 +89,15 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
   const breadcrumbList = breadcrumbs && breadcrumbs.length > 0 ? breadcrumbs : defaultBreadcrumbs;
 
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && onSearch) {
-      onSearch(searchValue);
+    if (e.key === "Enter") {
+      // Cancel any pending debounce and trigger immediate search
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      if (onSearch) {
+        onSearch(searchValue);
+      }
     }
   }, [onSearch, searchValue]);
 
@@ -145,7 +171,7 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
             type="text"
             placeholder="Search athletes, events, keys…"
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             className="w-full rounded-lg outline-none transition-all"
             style={{
@@ -169,6 +195,10 @@ export function TopHeader({ onCreateEvent, onSearch, breadcrumbs }: TopHeaderPro
           {searchValue && (
             <button
               onClick={() => {
+                if (debounceRef.current) {
+                  clearTimeout(debounceRef.current);
+                  debounceRef.current = null;
+                }
                 setSearchValue("");
                 if (onSearch) {
                   onSearch("");
