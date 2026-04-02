@@ -27,8 +27,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sports Event Management Dashboard",
-  description: "Professional sports event management dashboard",
+  title: "ISDN",
+  description: "ISDN Sports Event Management Dashboard",
 };
 
 export default function RootLayout({

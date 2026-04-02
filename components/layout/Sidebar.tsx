@@ -6,7 +6,6 @@ import {
   Trophy,
   Award,
   Settings,
-  Zap,
   LogOut,
   KeyRound,
 } from "lucide-react";
@@ -33,41 +32,21 @@ export function Sidebar({ activeNav, onNavChange }: SidebarProps) {
     >
       {/* Logo */}
       <div
-        className="px-5 py-5"
+        className="px-5 py-4"
         style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
       >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-          >
-            <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
-          </div>
-          <span
+        <div className="flex items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/isdn-logo/logo-sidebar.png"
+            alt="ISDN"
             style={{
-              fontFamily: '"Barlow Condensed", sans-serif',
-              fontWeight: 700,
-              fontSize: "1.35rem",
-              color: "#FFFFFF",
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
+              height: "32px",
+              width: "auto",
+              objectFit: "contain",
             }}
-          >
-            SportsEMS
-          </span>
+          />
         </div>
-        <p
-          style={{
-            color: "#334155",
-            fontSize: "0.6rem",
-            marginTop: "0.4rem",
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            fontFamily: '"Inter", sans-serif',
-          }}
-        >
-          Event Management System
-        </p>
       </div>
 
       {/* Navigation */}
