@@ -35,18 +35,42 @@ export function Sidebar({ activeNav, onNavChange }: SidebarProps) {
         className="px-5 py-4"
         style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
       >
-        <div className="flex items-center">
+        <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/isdn-logo/logo-sidebar.png"
             alt="ISDN"
             style={{
-              height: "32px",
+              height: "28px",
               width: "auto",
               objectFit: "contain",
             }}
           />
+          <span
+            style={{
+              fontFamily: '"Barlow Condensed", sans-serif',
+              fontWeight: 700,
+              fontSize: "1.25rem",
+              color: "#FFFFFF",
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}
+          >
+            ISDN
+          </span>
         </div>
+        <p
+          style={{
+            color: "#334155",
+            fontSize: "0.6rem",
+            marginTop: "0.35rem",
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            fontFamily: '"Inter", sans-serif',
+          }}
+        >
+          Event Management System
+        </p>
       </div>
 
       {/* Navigation */}
