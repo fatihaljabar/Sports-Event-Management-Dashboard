@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   title: "ISDN - Sports Event Management",
   description: "Professional sports event management dashboard",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/isdn-icon.ico",
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
@@ -43,7 +43,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable}`}>
+      <body
+        className={`${inter.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable}`}
+      >
         <QueryProvider>
           <NotificationProvider>
             <EventProvider>{children}</EventProvider>
