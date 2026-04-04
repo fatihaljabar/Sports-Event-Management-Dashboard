@@ -368,6 +368,7 @@ export function EditEventModal({ event, onClose, onUpdate }: EditEventModalProps
                 <FieldLabel required>Sport Categories</FieldLabel>
                 <SportMultiSelect
                   selected={selectedSports.map((s) => s.id)}
+                  eventType={eventType}
                   onToggle={handleSportToggle}
                 />
                 {errors.sports && (
