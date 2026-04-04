@@ -46,6 +46,9 @@ export const SPORT_OPTIONS: SportCategory[] = [
   // K
   { id: "karate", label: "Karate", emoji: "🥋" },
 
+  // P
+  { id: "petanque", label: "Pétanque", emoji: "⚪" },
+
   // R
   { id: "rowing", label: "Rowing", emoji: "🚣" },
   { id: "rugby", label: "Rugby", emoji: "🏉" },
