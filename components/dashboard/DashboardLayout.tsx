@@ -12,7 +12,7 @@ import { MedalTally } from "@/components/dashboard/panels/MedalTally";
 import { ActivityFeed } from "@/components/dashboard/panels/ActivityFeed";
 import { PerformanceChart } from "@/components/dashboard/panels/PerformanceChart";
 import { CreateEventModal } from "@/components/CreateEventModal";
-import { ParticipantsPage } from "@/components/ParticipantsPage";
+import { ParticipantsPage } from "@/components/participants";
 import { CompetitionResultsPage } from "@/components/CompetitionResultsPage";
 import { MedalStandingsPage } from "@/components/MedalStandingsPage";
 
