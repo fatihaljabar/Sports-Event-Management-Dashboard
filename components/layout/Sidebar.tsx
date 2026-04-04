@@ -7,7 +7,6 @@ import {
   Award,
   Settings,
   LogOut,
-  KeyRound,
 } from "lucide-react";
 
 const navItems = [
@@ -36,7 +35,6 @@ export function Sidebar({ activeNav, onNavChange }: SidebarProps) {
         style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
       >
         <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/isdn-logo/logo-sidebar.png"
             alt="ISDN"
