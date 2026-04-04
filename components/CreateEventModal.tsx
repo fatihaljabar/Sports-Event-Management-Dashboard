@@ -186,7 +186,6 @@ export function CreateEventModal({ onClose }: CreateEventModalProps) {
                 <FieldLabel required>Sport Categories</FieldLabel>
                 <SportMultiSelect
                   selected={selectedSports}
-                  eventType={eventType}
                   onToggle={handleSportToggle}
                 />
                 {errors.sports && (

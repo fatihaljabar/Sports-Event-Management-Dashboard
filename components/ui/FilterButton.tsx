@@ -1,7 +1,6 @@
 import React from "react";
 
 interface FilterButtonProps {
-  id: string;
   label: string;
   icon: React.ReactNode;
   count: number;
@@ -9,7 +8,7 @@ interface FilterButtonProps {
   onClick: () => void;
 }
 
-export function FilterButton({ id, label, icon, count, isActive, onClick }: FilterButtonProps) {
+export function FilterButton({ label, icon, count, isActive, onClick }: FilterButtonProps) {
   return (
     <button
       onClick={onClick}

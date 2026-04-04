@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Globe } from "lucide-react";
+import { Clock } from "lucide-react";
 
 interface TimezoneAlertProps {
   timezone: string;

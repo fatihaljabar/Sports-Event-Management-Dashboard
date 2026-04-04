@@ -3,15 +3,13 @@
 import { useState } from "react";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
 import { SPORT_OPTIONS } from "@/lib/constants/event-constants";
-import type { EventType } from "@/lib/constants/event-constants";
 
 interface SportMultiSelectProps {
   selected: string[];
-  eventType: EventType;
   onToggle: (id: string) => void;
 }
 
-export function SportMultiSelect({ selected, eventType, onToggle }: SportMultiSelectProps) {
+export function SportMultiSelect({ selected, onToggle }: SportMultiSelectProps) {
   const [open, setOpen] = useState(false);
 
   const handleToggle = (id: string) => {
