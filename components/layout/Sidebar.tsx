@@ -9,10 +9,10 @@ import {
   LogOut,
 } from "lucide-react";
 
-const navItems = [
+const navItems: Array<{ id: string; icon: React.ElementType; label: string; badge?: number }> = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { id: "events", icon: Calendar, label: "Event Management" },
-  { id: "participants", icon: Users, label: "Participants & Keys", badge: 3 },
+  { id: "participants", icon: Users, label: "Participants & Keys" },
   { id: "results", icon: Trophy, label: "Competition Results" },
   { id: "medals", icon: Award, label: "Medal Standings" },
   { id: "settings", icon: Settings, label: "Settings" },
