@@ -46,18 +46,6 @@ export function Sidebar({ activeNav, onNavChange }: SidebarProps) {
               objectFit: "contain",
             }}
           />
-          <span
-            style={{
-              fontFamily: '"Barlow Condensed", sans-serif',
-              fontWeight: 700,
-              fontSize: "1.25rem",
-              color: "#FFFFFF",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-            }}
-          >
-            ISDN
-          </span>
         </div>
         <p
           style={{
@@ -106,13 +94,15 @@ export function Sidebar({ activeNav, onNavChange }: SidebarProps) {
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive)
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      "rgba(255,255,255,0.04)";
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "rgba(255,255,255,0.04)";
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive)
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      "transparent";
+                    (
+                      e.currentTarget as HTMLButtonElement
+                    ).style.backgroundColor = "transparent";
                 }}
               >
                 {isActive && (

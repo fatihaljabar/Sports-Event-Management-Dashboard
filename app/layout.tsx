@@ -31,6 +31,7 @@ export const metadata: Metadata = {
   description: "Professional sports event management dashboard",
   icons: {
     icon: "/isdn-icon.ico",
+    shortcut: "/isdn-icon.ico",
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
