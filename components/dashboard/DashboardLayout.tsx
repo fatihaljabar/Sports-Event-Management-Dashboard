@@ -13,7 +13,7 @@ import { ActivityFeed } from "@/components/dashboard/panels/ActivityFeed";
 import { PerformanceChart } from "@/components/dashboard/panels/PerformanceChart";
 import { CreateEventModal } from "@/components/CreateEventModal";
 import { ParticipantsPage } from "@/components/participants";
-import { CompetitionResultsPage } from "@/components/CompetitionResultsPage";
+import { CompetitionResultsPage } from "@/components/competition-results";
 import { MedalStandingsPage } from "@/components/MedalStandingsPage";
 
 export function DashboardLayout() {
