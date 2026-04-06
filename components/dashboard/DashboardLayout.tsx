@@ -14,7 +14,7 @@ import { PerformanceChart } from "@/components/dashboard/panels/PerformanceChart
 import { CreateEventModal } from "@/components/CreateEventModal";
 import { ParticipantsPage } from "@/components/participants";
 import { CompetitionResultsPage } from "@/components/competition-results";
-import { MedalStandingsPage } from "@/components/MedalStandingsPage";
+import { MedalStandingsPage } from "@/components/medal-standings/MedalStandingsPage";
 
 export function DashboardLayout() {
   const router = useRouter();
