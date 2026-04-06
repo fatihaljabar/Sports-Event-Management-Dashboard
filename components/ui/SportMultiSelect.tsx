@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
 import { SPORT_OPTIONS } from "@/lib/constants/event-constants";
 import type { EventType } from "@/lib/constants/event-constants";
@@ -11,14 +11,17 @@ interface SportMultiSelectProps {
   onToggle: (id: string) => void;
 }
 
-export function SportMultiSelect({ selected, eventType, onToggle }: SportMultiSelectProps) {
+export function SportMultiSelect({ selected, onToggle }: SportMultiSelectProps) {
   const [open, setOpen] = useState(false);
 
   const handleToggle = (id: string) => {
     onToggle(id);
   };
 
-  const selectedLabels = SPORT_OPTIONS.filter((o) => selected.includes(o.id));
+  const selectedLabels = useMemo(
+    () => SPORT_OPTIONS.filter((o) => selected.includes(o.id)),
+    [selected]
+  );
 
   return (
     <div className="relative">
