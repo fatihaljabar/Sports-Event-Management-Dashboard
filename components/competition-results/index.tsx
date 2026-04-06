@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Download,
   RefreshCw,
@@ -34,10 +34,20 @@ export function CompetitionResultsPage() {
   } = useResults();
 
   const [refreshing, setRefreshing] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleRefresh = () => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1200);
+    refreshTimerRef.current = setTimeout(() => setRefreshing(false), 1200);
   };
 
   return (
