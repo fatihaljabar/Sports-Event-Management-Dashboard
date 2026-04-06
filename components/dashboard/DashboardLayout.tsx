@@ -18,7 +18,7 @@ import { MedalStandingsPage } from "@/components/MedalStandingsPage";
 
 export function DashboardLayout() {
   const router = useRouter();
-  const [activeNav, setActiveNav] = useState("dashboard");
+  const [activeNav] = useState("dashboard");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -38,12 +38,23 @@ export function DashboardLayout() {
     : (mounted ? format(currentTime, "HH:mm:ss 'UTC'") : "00:00:00 UTC");
 
   const handleNavChange = (id: string) => {
-    if (id === "events") {
-      // Navigate to proper Next.js route for events
-      router.push("/events");
-      return;
+    switch (id) {
+      case "dashboard":
+        router.push("/");
+        break;
+      case "events":
+        router.push("/events");
+        break;
+      case "participants":
+        router.push("/participants");
+        break;
+      case "results":
+        router.push("/results");
+        break;
+      case "medals":
+        router.push("/medals");
+        break;
     }
-    setActiveNav(id);
   };
 
   const handleSearch = (query: string) => {
