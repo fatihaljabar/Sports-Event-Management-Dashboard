@@ -11,7 +11,7 @@ interface SportMultiSelectProps {
   onToggle: (id: string) => void;
 }
 
-export function SportMultiSelect({ selected, onToggle }: SportMultiSelectProps) {
+export function SportMultiSelect({ selected, eventType: _eventType, onToggle }: SportMultiSelectProps) {
   const [open, setOpen] = useState(false);
 
   const handleToggle = (id: string) => {
