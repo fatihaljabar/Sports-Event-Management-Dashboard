@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { TopHeader, BreadcrumbItem } from "@/components/layout/TopHeader";
+import { Sidebar } from "@/components/admin/layout/Sidebar";
+import { TopHeader, BreadcrumbItem } from "@/components/admin/layout/TopHeader";
 import { CreateEventModal } from "@/components/CreateEventModal";
 
 export function DashboardLayoutWrapper({

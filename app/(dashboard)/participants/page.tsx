@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { ParticipantsPage } from "@/components/participants";
+import { ParticipantsPage } from "@/components/admin/participants";
 
 export default function ParticipantsRoutePage() {
   return (

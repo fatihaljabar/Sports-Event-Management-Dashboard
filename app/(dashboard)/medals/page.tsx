@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { MedalStandingsPage } from "@/components/medal-standings/MedalStandingsPage";
+import { MedalStandingsPage } from "@/components/admin/medal-standings/MedalStandingsPage";
 
 export default function MedalsRoutePage() {
   return (

@@ -112,14 +112,14 @@ export const ROSTER_CONFIG: Record<string, RosterConfig> = {
     verified: 218,
   },
   coaches: {
-    title: "Coach Roster",
+    title: "List Coach",
     totalLabel: "Total Coaches",
     total: 6,
     capacity: 20,
     verified: 5,
   },
   referees: {
-    title: "Referee Roster",
+    title: "List Referee",
     totalLabel: "Total Referees",
     total: 5,
     capacity: 15,

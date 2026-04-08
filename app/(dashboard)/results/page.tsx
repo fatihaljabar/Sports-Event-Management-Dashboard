@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { CompetitionResultsPage } from "@/components/competition-results";
+import { CompetitionResultsPage } from "@/components/admin/competition-results";
 
 export default function ResultsRoutePage() {
   return (
