@@ -22,15 +22,15 @@ export function AthleteSidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-6 border-b border-white/10">
-        <div
-          className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#2563eb] shrink-0 overflow-hidden"
-        >
-          <img
-            src="/isdn-logo/logo-sidebar.png"
-            alt="ISDN"
-            className="w-7 h-7 object-contain"
-          />
-        </div>
+        <img
+          src="/isdn-logo/logo-sidebar.png"
+          alt="ISDN"
+          style={{
+            height: "28px",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
         {!collapsed && (
           <div className="flex flex-col">
             <span
