@@ -11,7 +11,7 @@ import { EventsTable } from "@/components/admin/dashboard/panels/EventsTable";
 import { MedalTally } from "@/components/admin/dashboard/panels/MedalTally";
 import { ActivityFeed } from "@/components/admin/dashboard/panels/ActivityFeed";
 import { PerformanceChart } from "@/components/admin/dashboard/panels/PerformanceChart";
-import { CreateEventModal } from "@/components/CreateEventModal";
+import { CreateEventModal } from "@/components/admin/CreateEventModal";
 import { ParticipantsPage } from "@/components/admin/participants";
 import { CompetitionResultsPage } from "@/components/admin/competition-results";
 import { MedalStandingsPage } from "@/components/admin/medal-standings/MedalStandingsPage";

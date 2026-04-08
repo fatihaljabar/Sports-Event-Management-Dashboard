@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { EventManagementPage } from "@/components/admin/event-management";
-import { CreateEventModal } from "@/components/CreateEventModal";
+import { CreateEventModal } from "@/components/admin/CreateEventModal";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function EventsPageContent() {
