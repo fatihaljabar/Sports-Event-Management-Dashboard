@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { EventManagementPage } from "@/components/event-management";
+import { EventManagementPage } from "@/components/admin/event-management";
 import { CreateEventModal } from "@/components/CreateEventModal";
 import { useRouter, useSearchParams } from "next/navigation";
 

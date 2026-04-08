@@ -1,4 +1,4 @@
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { DashboardLayout } from "@/components/admin/dashboard/DashboardLayout";
 
 export default function HomePage() {
   return <DashboardLayout />;

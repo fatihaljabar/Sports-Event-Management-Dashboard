@@ -4,17 +4,17 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useDashboardSync } from "@/hooks/useDashboardSync";
-import { Sidebar } from "@/components/layout/Sidebar";
-import { TopHeader } from "@/components/layout/TopHeader";
-import { ScoreboardCards } from "@/components/dashboard/panels/ScoreboardCards";
-import { EventsTable } from "@/components/dashboard/panels/EventsTable";
-import { MedalTally } from "@/components/dashboard/panels/MedalTally";
-import { ActivityFeed } from "@/components/dashboard/panels/ActivityFeed";
-import { PerformanceChart } from "@/components/dashboard/panels/PerformanceChart";
+import { Sidebar } from "@/components/admin/layout/Sidebar";
+import { TopHeader } from "@/components/admin/layout/TopHeader";
+import { ScoreboardCards } from "@/components/admin/dashboard/panels/ScoreboardCards";
+import { EventsTable } from "@/components/admin/dashboard/panels/EventsTable";
+import { MedalTally } from "@/components/admin/dashboard/panels/MedalTally";
+import { ActivityFeed } from "@/components/admin/dashboard/panels/ActivityFeed";
+import { PerformanceChart } from "@/components/admin/dashboard/panels/PerformanceChart";
 import { CreateEventModal } from "@/components/CreateEventModal";
-import { ParticipantsPage } from "@/components/participants";
-import { CompetitionResultsPage } from "@/components/competition-results";
-import { MedalStandingsPage } from "@/components/medal-standings/MedalStandingsPage";
+import { ParticipantsPage } from "@/components/admin/participants";
+import { CompetitionResultsPage } from "@/components/admin/competition-results";
+import { MedalStandingsPage } from "@/components/admin/medal-standings/MedalStandingsPage";
 
 export function DashboardLayout() {
   const router = useRouter();

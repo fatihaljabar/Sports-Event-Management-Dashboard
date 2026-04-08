@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { nanoid } from "nanoid";
-import type { KeyStatus } from "@/components/key-management";
+import type { KeyStatus } from "@/components/admin/key-management";
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
