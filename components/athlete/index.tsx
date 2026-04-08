@@ -9,7 +9,6 @@ export { AthleteRecentRegistrations } from "./dashboard/AthleteRecentRegistratio
 
 // Modals
 export { AddAthleteModal } from "./modals/AddAthleteModal";
-export { QuickMatchInput } from "./modals/QuickMatchInput";
 
 // Roster
 export { AthletesPage } from "./roster/AthletesPage";

@@ -193,6 +193,6 @@ export interface AthleteNavItem {
 export const ATHLETE_NAV_ITEMS: AthleteNavItem[] = [
   { label: "Dashboard", href: "/roster", icon: LayoutDashboard },
   { label: "Athlete Roster", href: "/roster/athletes", icon: Users },
-  { label: "Coach Roster", href: "/roster/coaches", icon: UserRoundCheck },
-  { label: "Referee Roster", href: "/roster/referees", icon: Flag },
+  { label: "List Coach", href: "/roster/coaches", icon: UserRoundCheck },
+  { label: "List Referee", href: "/roster/referees", icon: Flag },
 ];

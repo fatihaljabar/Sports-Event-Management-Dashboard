@@ -43,6 +43,12 @@ export function AthleteSidebar() {
             >
               ISDN
             </span>
+            <span
+              className="text-[#64748b]"
+              style={{ fontSize: "11px" }}
+            >
+              Entry Management
+            </span>
           </div>
         )}
       </div>
