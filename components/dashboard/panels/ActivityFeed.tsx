@@ -161,7 +161,7 @@ export function ActivityFeed() {
       {/* Feed */}
       <div className="px-4 py-3">
         <div className="flex flex-col gap-0.5">
-          {activities.map((activity, idx) => {
+          {activities.map((activity, _idx) => {
             const conf = typeConfig[activity.type];
             const Icon = conf.Icon;
             return (

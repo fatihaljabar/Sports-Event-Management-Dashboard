@@ -2,24 +2,8 @@ import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Search, Filter, ChevronUp, ChevronDown } from "lucide-react";
 import { useEvents } from "@/lib/stores/event-store";
-import type { SponsorLogoData, SportCategory } from "@/lib/types/event";
 
 type EventStatus = "Active" | "Upcoming" | "Scheduled" | "Completed";
-
-interface ConvertedEvent {
-  id: string;
-  name: string;
-  location: string;
-  country: string;
-  sport: string;
-  sports: SportCategory[];
-  date: string;
-  startDate: string;
-  endDate: string;
-  status: EventStatus;
-  athletes: number;
-  sponsorLogos?: SponsorLogoData[];
-}
 
 const statusConfig: Record<EventStatus, { bg: string; color: string; dot: string }> = {
   Active: { bg: "#DCFCE7", color: "#15803D", dot: "#22C55E" },
