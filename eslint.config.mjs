@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: [".next/**", "node_modules/**", "dist/**", "build/**", "*.config.js"],
+    ignores: [".next/**", "node_modules/**", "dist/**", "build/**", "*.config.js", "*.config.mjs", "postcss.config.mjs"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
