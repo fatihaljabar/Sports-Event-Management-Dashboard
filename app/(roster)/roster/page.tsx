@@ -1,6 +1,5 @@
 "use client";
 
-import { Zap } from "lucide-react";
 import { EVENT_CONFIG } from "@/components/athlete";
 import { AthleteStatsRow } from "@/components/athlete/dashboard/AthleteStatsRow";
 import { AthleteRecentRegistrations } from "@/components/athlete/dashboard/AthleteRecentRegistrations";
@@ -37,19 +36,6 @@ export default function RosterDashboardPage() {
         />
         <div className="relative flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Zap size={18} style={{ color: "#fbbf24" }} />
-              <span
-                className="uppercase tracking-widest"
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "#93c5fd",
-                }}
-              >
-                Command Center
-              </span>
-            </div>
             <h1
               className="text-white mb-1"
               style={{
