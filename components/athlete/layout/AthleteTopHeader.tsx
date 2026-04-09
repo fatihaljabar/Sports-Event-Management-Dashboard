@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, ChevronDown, Settings } from "lucide-react";
+import { EVENT_CONFIG } from "../constants";
 
 export function AthleteTopHeader() {
   return (
@@ -14,11 +15,11 @@ export function AthleteTopHeader() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-full border"
           style={{ backgroundColor: "#eff6ff", borderColor: "#dbeafe" }}
         >
-          <span style={{ fontSize: "16px" }}>&#9917;</span>
+          <span style={{ fontSize: "16px" }}>{EVENT_CONFIG.sportEmoji}</span>
           <span
             style={{ fontSize: "13px", fontWeight: 500, color: "#1e40af" }}
           >
-            Football (Men&apos;s 11v11)
+            {EVENT_CONFIG.sportName}
           </span>
         </div>
         <div
@@ -29,7 +30,7 @@ export function AthleteTopHeader() {
           <span
             style={{ fontSize: "13px", fontWeight: 500, color: "#92400e" }}
           >
-            Unesa Cup 2026
+            {EVENT_CONFIG.eventName}
           </span>
         </div>
         <span className="text-gray-300 mx-1">|</span>

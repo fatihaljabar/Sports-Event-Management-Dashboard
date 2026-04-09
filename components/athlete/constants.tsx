@@ -10,6 +10,14 @@ import type {
   RosterConfig,
 } from "./types";
 
+// ─── Event Config ─────────────────────────────────────────────────────────────
+// Ganti nilai ini untuk ubah nama event di seluruh roster dashboard
+export const EVENT_CONFIG = {
+  eventName: "Unesa Cup 2026",
+  sportName: "Football (Men's 11v11)",
+  sportEmoji: "⚽",
+} as const;
+
 // ─── Avatar URLs ──────────────────────────────────────────────────────────────
 
 export const AVATAR_1 = "https://images.unsplash.com/photo-1533659077289-a4760896bfe9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMG1hbGUlMjBmb290YmFsbCUyMHBsYXllciUyMHBvcnRyYWl0fGVufDF8fHx8MTc3NTQ3OTcwMHww&ixlib=rb-4.1.0&q=80&w=400";

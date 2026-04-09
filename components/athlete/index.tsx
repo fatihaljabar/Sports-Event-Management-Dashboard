@@ -43,4 +43,5 @@ export {
   ROSTER_CONFIG,
   ALL_TEAMS,
   AVATAR_COLORS,
+  EVENT_CONFIG,
 } from "./constants";

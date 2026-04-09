@@ -1,6 +1,7 @@
 "use client";
 
 import { Zap } from "lucide-react";
+import { EVENT_CONFIG } from "@/components/athlete";
 import { AthleteStatsRow } from "@/components/athlete/dashboard/AthleteStatsRow";
 import { AthleteRecentRegistrations } from "@/components/athlete/dashboard/AthleteRecentRegistrations";
 
@@ -57,14 +58,14 @@ export default function RosterDashboardPage() {
                 fontWeight: 700,
               }}
             >
-              Welcome, Football Committee.
+              {EVENT_CONFIG.eventName}
             </h1>
             <p
               className="text-blue-200/70"
               style={{ fontSize: "14px", color: "rgba(191,219,254,0.7)" }}
             >
-              Your command center is ready. Manage athletes, update scores,
-              and track results in real-time.
+              Football Committee Roster Management. Register and manage athletes,
+              coaches, and referees for {EVENT_CONFIG.eventName}.
             </p>
           </div>
           <div className="hidden lg:flex items-center gap-3">
