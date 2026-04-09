@@ -6,6 +6,7 @@ export { AthleteTopHeader } from "./layout/AthleteTopHeader";
 // Dashboard
 export { AthleteStatsRow } from "./dashboard/AthleteStatsRow";
 export { AthleteRecentRegistrations } from "./dashboard/AthleteRecentRegistrations";
+export { WelcomeBanner } from "./dashboard/WelcomeBanner";
 
 // Modals
 export { AddAthleteModal } from "./modals/AddAthleteModal";
