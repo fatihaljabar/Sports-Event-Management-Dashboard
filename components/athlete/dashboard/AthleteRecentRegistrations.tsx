@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, CheckCircle2, Clock, UserRoundCheck, Flag } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Users, UserRoundCheck, Flag } from "lucide-react";
 import { ImageWithFallback } from "@/components/figma/ImageWithFallback";
 import { AddAthleteModal } from "../modals/AddAthleteModal";
 import {
@@ -28,16 +28,24 @@ export function AthleteRecentRegistrations() {
             className="flex items-center justify-between px-5 py-4 border-b"
             style={{ borderColor: "#f9fafb" }}
           >
-            <h3
-              className="text-gray-900"
-              style={{
-                fontFamily: "Barlow Condensed, sans-serif",
-                fontSize: "18px",
-                fontWeight: 600,
-              }}
-            >
-              Recent Athlete Registrations
-            </h3>
+            <div className="flex items-center gap-2">
+              <span
+                className="flex items-center justify-center w-6 h-6 rounded-md"
+                style={{ backgroundColor: "#eff6ff" }}
+              >
+                <Users size={13} style={{ color: "#2563eb" }} />
+              </span>
+              <h3
+                className="text-gray-900"
+                style={{
+                  fontFamily: "Barlow Condensed, sans-serif",
+                  fontSize: "18px",
+                  fontWeight: 600,
+                }}
+              >
+                Recent Athlete Registrations
+              </h3>
+            </div>
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white transition-colors active:scale-95 shadow-sm"
