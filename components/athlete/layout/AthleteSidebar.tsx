@@ -15,10 +15,14 @@ export function AthleteSidebar() {
 
   return (
     <aside
-      className={`relative flex flex-col h-screen transition-all duration-300 ${
+      className={`relative flex flex-col h-screen ${
         collapsed ? "w-[72px]" : "w-[260px]"
       }`}
-      style={{ backgroundColor: "#0a1628", fontFamily: "Inter, sans-serif" }}
+      style={{
+        backgroundColor: "#0a1628",
+        fontFamily: "Inter, sans-serif",
+        transition: "width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-6 border-b border-white/10">
