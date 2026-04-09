@@ -121,33 +121,6 @@ export function AthleteSidebar() {
           );
         })}
       </nav>
-
-      {/* Bottom Info */}
-      {!collapsed && (
-        <div className="px-4 pb-5">
-          <div
-            className="rounded-lg p-3 border"
-            style={{
-              backgroundColor: "rgba(255,255,255,0.05)",
-              borderColor: "rgba(255,255,255,0.05)",
-            }}
-          >
-            <p style={{ fontSize: "11px", color: "#94a3b8" }}>Access Level</p>
-            <p style={{ fontSize: "13px", fontWeight: 500, color: "white", marginTop: "2px" }}>
-              Sport Organizer
-            </p>
-            <div className="flex items-center gap-1.5 mt-2">
-              <div
-                className="w-1.5 h-1.5 rounded-full animate-pulse"
-                style={{ backgroundColor: "#4ade80" }}
-              />
-              <span style={{ fontSize: "11px", color: "#4ade80" }}>
-                Session Active
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </aside>
   );
 }
