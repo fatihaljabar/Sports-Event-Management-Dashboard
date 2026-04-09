@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useDashboardSync } from "@/hooks/useDashboardSync";
@@ -109,11 +109,13 @@ export function DashboardLayout() {
       {/* Main Area */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Top Header */}
-        <TopHeader
-          onCreateEvent={() => setShowCreateModal(true)}
-          onSearch={handleSearch}
-          breadcrumbs={getBreadcrumbs()}
-        />
+        <Suspense fallback={<div style={{ height: "60px", backgroundColor: "#FFFFFF", borderBottom: "1px solid #F1F5F9" }} />}>
+          <TopHeader
+            onCreateEvent={() => setShowCreateModal(true)}
+            onSearch={handleSearch}
+            breadcrumbs={getBreadcrumbs()}
+          />
+        </Suspense>
 
         {/* Page Content */}
         {activeNav === "participants" ? (

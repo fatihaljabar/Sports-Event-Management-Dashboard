@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/admin/layout/Sidebar";
 import { TopHeader, BreadcrumbItem } from "@/components/admin/layout/TopHeader";
@@ -130,11 +130,13 @@ export function DashboardLayoutWrapper({
     >
       <Sidebar activeNav={activeNav} onNavChange={handleNavChange} />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopHeader
-          onCreateEvent={() => setShowCreateModal(true)}
-          onSearch={handleSearch}
-          breadcrumbs={breadcrumbs}
-        />
+        <Suspense fallback={<div style={{ height: "60px", backgroundColor: "#FFFFFF", borderBottom: "1px solid #F1F5F9" }} />}>
+          <TopHeader
+            onCreateEvent={() => setShowCreateModal(true)}
+            onSearch={handleSearch}
+            breadcrumbs={breadcrumbs}
+          />
+        </Suspense>
         {children}
       </div>
       {showCreateModal && (
