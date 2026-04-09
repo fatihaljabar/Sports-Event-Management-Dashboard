@@ -1,19 +1,10 @@
 "use client";
 
 import { EVENT_CONFIG } from "../constants";
+import { useServerTime } from "../hooks/useServerTime";
 
 export function WelcomeBanner() {
-  const today = new Date();
-  const timeStr = today.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-  const dateStr = today.toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const { timeStr, dateStr } = useServerTime();
 
   return (
     <div
