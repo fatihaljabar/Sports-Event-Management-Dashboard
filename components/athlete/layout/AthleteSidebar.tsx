@@ -21,7 +21,7 @@ export function AthleteSidebar() {
       style={{
         backgroundColor: "#0a1628",
         fontFamily: "Inter, sans-serif",
-        transition: "width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "width 300ms cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
       {/* Logo */}
