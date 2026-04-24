@@ -15,6 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import type { TeamPerson } from "../types";
+import { AthleteDetailDrawer, AthleteDetailData } from "../drawers/AthleteDetailDrawer";
 
 interface TeamData {
   name: string;
@@ -71,6 +72,36 @@ const fallbackTeam: TeamData = {
   coaches: [],
 };
 
+function toAthleteDetail(person: TeamPerson): AthleteDetailData {
+  return {
+    name: person.name,
+    nik: person.nik,
+    initials: person.initials,
+    avatarColor: person.avatarColor,
+    verified: person.verified,
+    dob: person.dob,
+    age: person.age,
+    role: "athlete",
+    position: person.position,
+    jerseyNumber: person.jerseyNumber,
+  };
+}
+
+function toCoachDetail(person: TeamPerson): AthleteDetailData {
+  return {
+    name: person.name,
+    nik: person.nik,
+    initials: person.initials,
+    avatarColor: person.avatarColor,
+    verified: person.verified,
+    dob: person.dob,
+    age: person.age,
+    role: "coach",
+    licenseLevel: person.licenseLevel,
+    coachRole: person.coachRole,
+  };
+}
+
 export function TeamRosterPage() {
   const params = useParams();
   const router = useRouter();
@@ -79,8 +110,8 @@ export function TeamRosterPage() {
 
   const [activeTab, setActiveTab] = useState<"athletes" | "coaches">("athletes");
   const [search, setSearch] = useState("");
-  const [viewedAthlete, setViewedAthlete] = useState<TeamPerson | null>(null);
-  const [viewedCoach, setViewedCoach] = useState<TeamPerson | null>(null);
+  const [viewedAthlete, setViewedAthlete] = useState<AthleteDetailData | null>(null);
+  const [viewedCoach, setViewedCoach] = useState<AthleteDetailData | null>(null);
 
   const athleteFull = team.currentAthletes >= team.maxAthletes;
   const coachFull = team.currentCoaches >= team.maxCoaches;
@@ -301,10 +332,12 @@ export function TeamRosterPage() {
                 filteredAthletes.map((person) => (
                   <tr
                     key={person.id}
-                    onClick={() => setViewedAthlete(person)}
                     className="border-b border-[#f8fafc] hover:bg-[#fafbfd] transition-colors cursor-pointer"
                   >
-                    <td className="px-5 py-4">
+                    <td
+                      className="px-5 py-4"
+                      onClick={() => setViewedAthlete(toAthleteDetail(person))}
+                    >
                       <div className="flex items-center gap-3">
                         <div
                           className="flex items-center justify-center w-9 h-9 rounded-full text-white shrink-0"
@@ -332,12 +365,12 @@ export function TeamRosterPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={() => setViewedAthlete(toAthleteDetail(person))}>
                       <span className="text-[#475569]" style={{ fontSize: "13px" }}>
                         {person.position}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={() => setViewedAthlete(toAthleteDetail(person))}>
                       <span
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#f1f5f9] text-[#0f172a]"
                         style={{
@@ -349,7 +382,7 @@ export function TeamRosterPage() {
                         {person.jerseyNumber}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={() => setViewedAthlete(toAthleteDetail(person))}>
                       <div>
                         <p className="text-[#475569]" style={{ fontSize: "13px" }}>
                           {person.dob}
@@ -359,7 +392,7 @@ export function TeamRosterPage() {
                         </p>
                       </div>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={() => setViewedAthlete(toAthleteDetail(person))}>
                       {person.verified ? (
                         <span className="inline-flex items-center gap-1.5 text-emerald-600" style={{ fontSize: "12px", fontWeight: 500 }}>
                           <ShieldCheck size={14} /> Verified via NIK
@@ -373,7 +406,7 @@ export function TeamRosterPage() {
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => setViewedAthlete(person)}
+                          onClick={() => setViewedAthlete(toAthleteDetail(person))}
                           className="flex items-center justify-center w-8 h-8 rounded-lg text-[#2563eb] hover:bg-blue-50 transition-colors"
                         >
                           <Eye size={15} />
@@ -390,10 +423,12 @@ export function TeamRosterPage() {
                 filteredCoaches.map((person) => (
                   <tr
                     key={person.id}
-                    onClick={() => setViewedCoach(person)}
                     className="border-b border-[#f8fafc] hover:bg-[#fafbfd] transition-colors cursor-pointer"
                   >
-                    <td className="px-5 py-4">
+                    <td
+                      className="px-5 py-4"
+                      onClick={() => setViewedCoach(toCoachDetail(person))}
+                    >
                       <div className="flex items-center gap-3">
                         <div
                           className="flex items-center justify-center w-9 h-9 rounded-full text-white shrink-0"
@@ -421,12 +456,12 @@ export function TeamRosterPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={() => setViewedCoach(toCoachDetail(person))}>
                       <span className="text-[#475569]" style={{ fontSize: "13px" }}>
                         {person.coachRole}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={() => setViewedCoach(toCoachDetail(person))}>
                       <span
                         className="inline-flex items-center px-2.5 py-1 rounded-full bg-violet-50 text-violet-600"
                         style={{ fontSize: "11px", fontWeight: 600 }}
@@ -434,7 +469,7 @@ export function TeamRosterPage() {
                         {person.licenseLevel}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={() => setViewedCoach(toCoachDetail(person))}>
                       <div>
                         <p className="text-[#475569]" style={{ fontSize: "13px" }}>
                           {person.dob}
@@ -444,7 +479,7 @@ export function TeamRosterPage() {
                         </p>
                       </div>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4" onClick={() => setViewedCoach(toCoachDetail(person))}>
                       {person.verified ? (
                         <span className="inline-flex items-center gap-1.5 text-emerald-600" style={{ fontSize: "12px", fontWeight: 500 }}>
                           <ShieldCheck size={14} /> Verified via NIK
@@ -458,7 +493,7 @@ export function TeamRosterPage() {
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => setViewedCoach(person)}
+                          onClick={() => setViewedCoach(toCoachDetail(person))}
                           className="flex items-center justify-center w-8 h-8 rounded-lg text-[#2563eb] hover:bg-blue-50 transition-colors"
                         >
                           <Eye size={15} />
@@ -507,97 +542,20 @@ export function TeamRosterPage() {
         )}
       </div>
 
-      {/* View Drawer - simplified inline version since we don't have the full AthleteDetailDrawer */}
-      {(viewedAthlete || viewedCoach) && (
-        <div
-          className="fixed inset-0 z-50 flex"
-          style={{ fontFamily: "Inter, sans-serif" }}
-        >
-          <div className="absolute inset-0 bg-[#0f172a]/40" onClick={() => { setViewedAthlete(null); setViewedCoach(null); }} />
-          <div
-            className="relative ml-auto w-full max-w-md bg-white h-full overflow-y-auto"
-            style={{ animation: "slideInRight 300ms ease-out" }}
-          >
-            <div className="sticky top-0 bg-white border-b border-[#f1f5f9] px-6 py-4 flex items-center justify-between z-10">
-              <h2 className="text-[#0f172a]" style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "20px", fontWeight: 700 }}>
-                Profile Detail
-              </h2>
-              <button
-                onClick={() => { setViewedAthlete(null); setViewedCoach(null); }}
-                className="flex items-center justify-center w-8 h-8 rounded-lg text-[#94a3b8] hover:bg-[#f1f5f9] transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-6">
-              {(viewedAthlete || viewedCoach) && (
-                <>
-                  <div className="flex flex-col items-center mb-6">
-                    <div
-                      className="flex items-center justify-center w-20 h-20 rounded-full text-white mb-3"
-                      style={{
-                        backgroundColor: (viewedAthlete || viewedCoach)!.avatarColor,
-                        fontSize: "24px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {(viewedAthlete || viewedCoach)!.initials}
-                    </div>
-                    <h3 className="text-[#0f172a] text-xl font-semibold">{(viewedAthlete || viewedCoach)!.name}</h3>
-                    <p className="text-[#94a3b8]" style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "13px" }}>
-                      {(viewedAthlete || viewedCoach)!.nik}
-                    </p>
-                    <div className="mt-2">
-                      {(viewedAthlete || viewedCoach)!.verified ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600" style={{ fontSize: "12px", fontWeight: 500 }}>
-                          <ShieldCheck size={14} /> Verified via NIK
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-500" style={{ fontSize: "12px", fontWeight: 500 }}>
-                          Pending
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="rounded-lg bg-[#f8fafc] p-4 border border-[#e2e8f0]">
-                      <p className="text-[#94a3b8] mb-1" style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>DATE OF BIRTH / AGE</p>
-                      <p className="text-[#0f172a]" style={{ fontSize: "14px", fontWeight: 500 }}>
-                        {(viewedAthlete || viewedCoach)!.dob} ({(viewedAthlete || viewedCoach)!.age} years old)
-                      </p>
-                    </div>
-                    {viewedAthlete && (
-                      <>
-                        <div className="rounded-lg bg-[#f8fafc] p-4 border border-[#e2e8f0]">
-                          <p className="text-[#94a3b8] mb-1" style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>POSITION</p>
-                          <p className="text-[#0f172a]" style={{ fontSize: "14px", fontWeight: 500 }}>{viewedAthlete.position}</p>
-                        </div>
-                        <div className="rounded-lg bg-[#f8fafc] p-4 border border-[#e2e8f0]">
-                          <p className="text-[#94a3b8] mb-1" style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>JERSEY NUMBER</p>
-                          <p className="text-[#0f172a] text-2xl font-bold" style={{ fontFamily: "Barlow Condensed, sans-serif" }}>#{viewedAthlete.jerseyNumber}</p>
-                        </div>
-                      </>
-                    )}
-                    {viewedCoach && (
-                      <>
-                        <div className="rounded-lg bg-[#f8fafc] p-4 border border-[#e2e8f0]">
-                          <p className="text-[#94a3b8] mb-1" style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>ROLE</p>
-                          <p className="text-[#0f172a]" style={{ fontSize: "14px", fontWeight: 500 }}>{viewedCoach.coachRole}</p>
-                        </div>
-                        <div className="rounded-lg bg-[#f8fafc] p-4 border border-[#e2e8f0]">
-                          <p className="text-[#94a3b8] mb-1" style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em" }}>LICENSE</p>
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-violet-50 text-violet-600" style={{ fontSize: "11px", fontWeight: 600 }}>
-                            {viewedCoach.licenseLevel}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Athlete Detail Drawer */}
+      {viewedAthlete && (
+        <AthleteDetailDrawer
+          athlete={viewedAthlete}
+          onClose={() => setViewedAthlete(null)}
+        />
+      )}
+
+      {/* Coach Detail Drawer */}
+      {viewedCoach && (
+        <AthleteDetailDrawer
+          athlete={viewedCoach}
+          onClose={() => setViewedCoach(null)}
+        />
       )}
     </div>
   );

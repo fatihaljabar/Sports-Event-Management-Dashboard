@@ -24,6 +24,9 @@ export { getLicenseType } from "./roster/LicenseBadge";
 export { TeamsPage } from "./teams/TeamsPage";
 export { TeamRosterPage } from "./teams/TeamRosterPage";
 
+// Drawers
+export { AthleteDetailDrawer } from "./drawers/AthleteDetailDrawer";
+
 // Types & Constants
 export type {
   TeamRecord,
@@ -38,6 +41,11 @@ export type {
   LicenseType,
   LicenseBadgeProps,
 } from "./types";
+
+export type {
+  ProfileRole,
+  AthleteDetailData,
+} from "./drawers/AthleteDetailDrawer";
 
 export {
   ATHLETES,
