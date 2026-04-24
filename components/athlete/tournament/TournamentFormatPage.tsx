@@ -242,7 +242,7 @@ export function TournamentFormatPage() {
             </button>
             <button
               disabled={!selected}
-              onClick={() => selected && router.push("/tournament-draw")}
+              onClick={() => selected && router.push("/roster/tournament-draw")}
               className="inline-flex items-center gap-2 px-5 h-11 rounded-lg text-white transition-all active:scale-[0.98]"
               style={{
                 background: selected
