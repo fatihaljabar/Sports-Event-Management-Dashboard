@@ -20,8 +20,14 @@ export { StatusBadge } from "./roster/StatusBadge";
 export { LicenseBadge } from "./roster/LicenseBadge";
 export { getLicenseType } from "./roster/LicenseBadge";
 
+// Teams
+export { TeamsPage } from "./teams/TeamsPage";
+export { TeamRosterPage } from "./teams/TeamRosterPage";
+
 // Types & Constants
 export type {
+  TeamRecord,
+  TeamPerson,
   AthleteRecord,
   CoachRecord,
   RefereeRecord,
