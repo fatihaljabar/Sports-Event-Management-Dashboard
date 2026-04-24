@@ -6,6 +6,7 @@ export { AthleteTopHeader } from "./layout/AthleteTopHeader";
 // Dashboard
 export { AthleteStatsRow } from "./dashboard/AthleteStatsRow";
 export { AthleteRecentRegistrations } from "./dashboard/AthleteRecentRegistrations";
+export { WelcomeBanner } from "./dashboard/WelcomeBanner";
 
 // Modals
 export { AddAthleteModal } from "./modals/AddAthleteModal";
@@ -19,8 +20,17 @@ export { StatusBadge } from "./roster/StatusBadge";
 export { LicenseBadge } from "./roster/LicenseBadge";
 export { getLicenseType } from "./roster/LicenseBadge";
 
+// Teams
+export { TeamsPage } from "./teams/TeamsPage";
+export { TeamRosterPage } from "./teams/TeamRosterPage";
+
+// Drawers
+export { AthleteDetailDrawer } from "./drawers/AthleteDetailDrawer";
+
 // Types & Constants
 export type {
+  TeamRecord,
+  TeamPerson,
   AthleteRecord,
   CoachRecord,
   RefereeRecord,
@@ -31,6 +41,11 @@ export type {
   LicenseType,
   LicenseBadgeProps,
 } from "./types";
+
+export type {
+  ProfileRole,
+  AthleteDetailData,
+} from "./drawers/AthleteDetailDrawer";
 
 export {
   ATHLETES,
@@ -43,4 +58,5 @@ export {
   ROSTER_CONFIG,
   ALL_TEAMS,
   AVATAR_COLORS,
+  EVENT_CONFIG,
 } from "./constants";

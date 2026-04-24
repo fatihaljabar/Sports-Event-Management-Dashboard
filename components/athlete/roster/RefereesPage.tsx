@@ -12,7 +12,7 @@ import { AvatarCell } from "./AvatarCell";
 import { StatusBadge } from "./StatusBadge";
 import { LicenseBadge, getLicenseType } from "./LicenseBadge";
 import { AddAthleteModal } from "../modals/AddAthleteModal";
-import { REFEREES, ROSTER_CONFIG } from "../constants";
+import { REFEREES, ROSTER_CONFIG, EVENT_CONFIG } from "../constants";
 
 function formatNik(nik: string) {
   return nik.replace(/(\d{4})(\d{4})(\d{4})(\d{4})/, "$1 $2 $3 $4");
@@ -59,7 +59,7 @@ export function RefereesPage() {
                 {config.title}
               </h1>
               <p className="text-gray-400 mt-0.5" style={{ fontSize: "12px" }}>
-                &#9917; Football (Men&apos;s 11v11) &nbsp;&middot;&nbsp; &#127942; Unesa Cup 2026
+                {EVENT_CONFIG.sportEmoji} {EVENT_CONFIG.sportName} &nbsp;&middot;&nbsp; &#127942; {EVENT_CONFIG.eventName}
               </p>
             </div>
           </div>

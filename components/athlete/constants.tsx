@@ -1,4 +1,4 @@
-import { Users, Swords, Clock, UserRoundCheck, Flag, LayoutDashboard } from "lucide-react";
+import { Users, Swords, Clock, UserRoundCheck, Flag, LayoutDashboard, Shield } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type {
   AthleteRecord,
@@ -9,6 +9,14 @@ import type {
   RecentReferee,
   RosterConfig,
 } from "./types";
+
+// ─── Event Config ─────────────────────────────────────────────────────────────
+// Ganti nilai ini untuk ubah nama event di seluruh roster dashboard
+export const EVENT_CONFIG = {
+  eventName: "Unesa Cup 2026",
+  sportName: "Football (Men's 11v11)",
+  sportEmoji: "⚽",
+} as const;
 
 // ─── Avatar URLs ──────────────────────────────────────────────────────────────
 
@@ -192,6 +200,7 @@ export interface AthleteNavItem {
 
 export const ATHLETE_NAV_ITEMS: AthleteNavItem[] = [
   { label: "Dashboard", href: "/roster", icon: LayoutDashboard },
+  { label: "Teams & Quota", href: "/roster/teams", icon: Shield },
   { label: "Athlete Roster", href: "/roster/athletes", icon: Users },
   { label: "List Coach", href: "/roster/coaches", icon: UserRoundCheck },
   { label: "List Referee", href: "/roster/referees", icon: Flag },

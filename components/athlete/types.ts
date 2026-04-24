@@ -1,3 +1,33 @@
+// ─── Team Types ───────────────────────────────────────────────────────────────
+
+export interface TeamRecord {
+  id: string;
+  name: string;
+  logoColor: string;
+  logoInitials: string;
+  maxAthletes: number;
+  currentAthletes: number;
+  maxCoaches: number;
+  currentCoaches: number;
+  logoImage?: string | null;
+  eventType?: string;
+}
+
+export interface TeamPerson {
+  id: string;
+  name: string;
+  nik: string;
+  dob: string;
+  age: number;
+  position?: string;
+  jerseyNumber?: number;
+  licenseLevel?: string;
+  coachRole?: string;
+  verified: boolean;
+  avatarColor: string;
+  initials: string;
+}
+
 // ─── Athlete Record Types ────────────────────────────────────────────────────
 
 export interface AthleteRecord {
