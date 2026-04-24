@@ -24,6 +24,9 @@ export { getLicenseType } from "./roster/LicenseBadge";
 export { TeamsPage } from "./teams/TeamsPage";
 export { TeamRosterPage } from "./teams/TeamRosterPage";
 
+// Tournament
+export { TournamentFormatPage } from "./tournament/TournamentFormatPage";
+
 // Drawers
 export { AthleteDetailDrawer } from "./drawers/AthleteDetailDrawer";
 
