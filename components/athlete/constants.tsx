@@ -1,4 +1,4 @@
-import { Users, Swords, Clock, UserRoundCheck, Flag, LayoutDashboard, Shield, Trophy } from "lucide-react";
+import { Users, Swords, Clock, UserRoundCheck, Flag, LayoutDashboard, Shield, Trophy, GitBranch } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type {
   AthleteRecord,
@@ -205,4 +205,5 @@ export const ATHLETE_NAV_ITEMS: AthleteNavItem[] = [
   { label: "List Coach", href: "/roster/coaches", icon: UserRoundCheck },
   { label: "List Referee", href: "/roster/referees", icon: Flag },
   { label: "Tournament Format", href: "/roster/tournament-format", icon: Trophy },
+  { label: "Match Bracket", href: "/roster/match-bracket", icon: GitBranch },
 ];

@@ -364,6 +364,7 @@ export function TournamentDrawPage() {
           </span>
           <button
             disabled={placedCount !== totalSlots}
+            onClick={() => placedCount === totalSlots && router.push("/roster/match-bracket")}
             className="inline-flex items-center gap-2 px-5 h-11 rounded-lg text-white transition-all active:scale-[0.98]"
             style={{
               background:

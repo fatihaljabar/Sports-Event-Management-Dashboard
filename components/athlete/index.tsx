@@ -28,6 +28,9 @@ export { TeamRosterPage } from "./teams/TeamRosterPage";
 export { TournamentFormatPage } from "./tournament/TournamentFormatPage";
 export { TournamentDrawPage } from "./tournament/TournamentDrawPage";
 
+// Bracket
+export { MatchBracketPage } from "./bracket/MatchBracketPage";
+
 // Drawers
 export { AthleteDetailDrawer } from "./drawers/AthleteDetailDrawer";
 
